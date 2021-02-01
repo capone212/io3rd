@@ -35,6 +35,7 @@ auto multiply(const matrix_t<N>& left, const matrix_t<N>& right) {
     return result;
 }
 
+
 template<std::size_t N>
 void print(const matrix_t<N>& matrix, const std::string& name) {
     std::cout << name << "=[" << std::endl;
@@ -47,13 +48,18 @@ void print(const matrix_t<N>& matrix, const std::string& name) {
     std::cout << "]"  << std::endl;
 }
 
+// Optmization 1: vector instructions
+// Optimization 2: mutlithreaded multiply
+// Optimization 3: algorithmic
+
+
 int main() {
-    constexpr std::size_t N = 2000;
+    constexpr std::size_t N = 2048;
     auto A = std::make_unique<matrix_t<N>>();
     auto B = std::make_unique<matrix_t<N>>();
     init_random(*A);
     init_random(*B);
-    auto C = multiply(*A, *B);
+    multiply(*A, *B);
     // print(A, "A");
     // print(B, "B");
     // print(C, "C");

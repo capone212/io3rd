@@ -1,0 +1,104 @@
+0000000000001403 <auto multiply_non_vector<std::array<std::array<int, 2048ul>, 2048ul> >(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&, int)>:
+    1403:       f3 0f 1e fa             endbr64 
+    1407:       55                      push   rbp
+    1408:       48 89 e5                mov    rbp,rsp
+    140b:       41 55                   push   r13
+    140d:       41 54                   push   r12
+    140f:       53                      push   rbx
+    1410:       48 83 ec 48             sub    rsp,0x48
+    1414:       48 89 7d b8             mov    QWORD PTR [rbp-0x48],rdi
+    1418:       48 89 75 b0             mov    QWORD PTR [rbp-0x50],rsi
+    141c:       48 89 55 a8             mov    QWORD PTR [rbp-0x58],rdx
+    1420:       89 4d a4                mov    DWORD PTR [rbp-0x5c],ecx
+    1423:       64 48 8b 04 25 28 00 00 00      mov    rax,QWORD PTR fs:0x28
+    142c:       48 89 45 d8             mov    QWORD PTR [rbp-0x28],rax
+    1430:       31 c0                   xor    eax,eax
+    1432:       48 8b 45 b8             mov    rax,QWORD PTR [rbp-0x48]
+    1436:       48 89 c7                mov    rdi,rax
+    1439:       e8 39 01 00 00          call   1577 <std::_MakeUniq<std::array<std::array<int, 2048ul>, 2048ul> >::__single_object std::make_unique<std::array<std::array<int, 2048ul>, 2048ul>>()>
+    143e:       c7 45 cc 00 00 00 00    mov    DWORD PTR [rbp-0x34],0x0
+    1445:       8b 45 cc                mov    eax,DWORD PTR [rbp-0x34]
+    1448:       3b 45 a4                cmp    eax,DWORD PTR [rbp-0x5c]
+    144b:       0f 8d 02 01 00 00       jge    1553 <auto multiply_non_vector<std::array<std::array<int, 2048ul>, 2048ul> >(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&, int)+0x150>
+    1451:       c7 45 d0 00 00 00 00    mov    DWORD PTR [rbp-0x30],0x0
+    1458:       8b 45 d0                mov    eax,DWORD PTR [rbp-0x30]
+    145b:       3b 45 a4                cmp    eax,DWORD PTR [rbp-0x5c]
+    145e:       0f 8d e6 00 00 00       jge    154a <auto multiply_non_vector<std::array<std::array<int, 2048ul>, 2048ul> >(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&, int)+0x147>
+    1464:       8b 45 d0                mov    eax,DWORD PTR [rbp-0x30]
+    1467:       48 63 d8                movsxd rbx,eax
+    146a:       8b 45 cc                mov    eax,DWORD PTR [rbp-0x34]
+    146d:       4c 63 e0                movsxd r12,eax
+    1470:       48 8b 45 b8             mov    rax,QWORD PTR [rbp-0x48]
+    1474:       48 89 c7                mov    rdi,rax
+    1477:       e8 b2 01 00 00          call   162e <std::unique_ptr<std::array<std::array<int, 2048ul>, 2048ul>, std::default_delete<std::array<std::array<int, 2048ul>, 2048ul> > >::operator*() const>
+    147c:       4c 89 e6                mov    rsi,r12
+    147f:       48 89 c7                mov    rdi,rax
+    1482:       e8 c5 01 00 00          call   164c <std::array<std::array<int, 2048ul>, 2048ul>::operator[](unsigned long)>
+    1487:       48 89 de                mov    rsi,rbx
+    148a:       48 89 c7                mov    rdi,rax
+    148d:       e8 e4 01 00 00          call   1676 <std::array<int, 2048ul>::operator[](unsigned long)>
+    1492:       c7 00 00 00 00 00       mov    DWORD PTR [rax],0x0
+    1498:       c7 45 d4 00 00 00 00    mov    DWORD PTR [rbp-0x2c],0x0
+    149f:       8b 45 d4                mov    eax,DWORD PTR [rbp-0x2c]
+    14a2:       3b 45 a4                cmp    eax,DWORD PTR [rbp-0x5c]
+    14a5:       0f 8d 96 00 00 00       jge    1541 <auto multiply_non_vector<std::array<std::array<int, 2048ul>, 2048ul> >(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&, int)+0x13e>
+    14ab:       8b 45 d4                mov    eax,DWORD PTR [rbp-0x2c]
+    14ae:       48 63 d8                movsxd rbx,eax
+    14b1:       8b 45 cc                mov    eax,DWORD PTR [rbp-0x34]
+    14b4:       48 63 d0                movsxd rdx,eax
+    14b7:       48 8b 45 b0             mov    rax,QWORD PTR [rbp-0x50]
+    14bb:       48 89 d6                mov    rsi,rdx
+    14be:       48 89 c7                mov    rdi,rax
+    14c1:       e8 da 01 00 00          call   16a0 <std::array<std::array<int, 2048ul>, 2048ul>::operator[](unsigned long) const>
+    14c6:       48 89 de                mov    rsi,rbx
+    14c9:       48 89 c7                mov    rdi,rax
+    14cc:       e8 f9 01 00 00          call   16ca <std::array<int, 2048ul>::operator[](unsigned long) const>
+    14d1:       44 8b 20                mov    r12d,DWORD PTR [rax]
+    14d4:       8b 45 d0                mov    eax,DWORD PTR [rbp-0x30]
+    14d7:       48 63 d8                movsxd rbx,eax
+    14da:       8b 45 d4                mov    eax,DWORD PTR [rbp-0x2c]
+    14dd:       48 63 d0                movsxd rdx,eax
+    14e0:       48 8b 45 a8             mov    rax,QWORD PTR [rbp-0x58]
+    14e4:       48 89 d6                mov    rsi,rdx
+    14e7:       48 89 c7                mov    rdi,rax
+    14ea:       e8 b1 01 00 00          call   16a0 <std::array<std::array<int, 2048ul>, 2048ul>::operator[](unsigned long) const>
+    14ef:       48 89 de                mov    rsi,rbx
+    14f2:       48 89 c7                mov    rdi,rax
+    14f5:       e8 d0 01 00 00          call   16ca <std::array<int, 2048ul>::operator[](unsigned long) const>
+    14fa:       8b 00                   mov    eax,DWORD PTR [rax]
+    14fc:       45 89 e5                mov    r13d,r12d
+    14ff:       44 0f af e8             imul   r13d,eax
+    1503:       8b 45 d0                mov    eax,DWORD PTR [rbp-0x30]
+    1506:       48 63 d8                movsxd rbx,eax
+    1509:       8b 45 cc                mov    eax,DWORD PTR [rbp-0x34]
+    150c:       4c 63 e0                movsxd r12,eax
+    150f:       48 8b 45 b8             mov    rax,QWORD PTR [rbp-0x48]
+    1513:       48 89 c7                mov    rdi,rax
+    1516:       e8 13 01 00 00          call   162e <std::unique_ptr<std::array<std::array<int, 2048ul>, 2048ul>, std::default_delete<std::array<std::array<int, 2048ul>, 2048ul> > >::operator*() const>
+    151b:       4c 89 e6                mov    rsi,r12
+    151e:       48 89 c7                mov    rdi,rax
+    1521:       e8 26 01 00 00          call   164c <std::array<std::array<int, 2048ul>, 2048ul>::operator[](unsigned long)>
+    1526:       48 89 de                mov    rsi,rbx
+    1529:       48 89 c7                mov    rdi,rax
+    152c:       e8 45 01 00 00          call   1676 <std::array<int, 2048ul>::operator[](unsigned long)>
+    1531:       8b 10                   mov    edx,DWORD PTR [rax]
+    1533:       44 01 ea                add    edx,r13d
+    1536:       89 10                   mov    DWORD PTR [rax],edx
+    1538:       83 45 d4 01             add    DWORD PTR [rbp-0x2c],0x1
+    153c:       e9 5e ff ff ff          jmp    149f <auto multiply_non_vector<std::array<std::array<int, 2048ul>, 2048ul> >(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&, int)+0x9c>
+    1541:       83 45 d0 01             add    DWORD PTR [rbp-0x30],0x1
+    1545:       e9 0e ff ff ff          jmp    1458 <auto multiply_non_vector<std::array<std::array<int, 2048ul>, 2048ul> >(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&, int)+0x55>
+    154a:       83 45 cc 01             add    DWORD PTR [rbp-0x34],0x1
+    154e:       e9 f2 fe ff ff          jmp    1445 <auto multiply_non_vector<std::array<std::array<int, 2048ul>, 2048ul> >(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&, int)+0x42>
+    1553:       90                      nop
+    1554:       48 8b 45 d8             mov    rax,QWORD PTR [rbp-0x28]
+    1558:       64 48 33 04 25 28 00 00 00      xor    rax,QWORD PTR fs:0x28
+    1561:       74 05                   je     1568 <auto multiply_non_vector<std::array<std::array<int, 2048ul>, 2048ul> >(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&, int)+0x165>
+    1563:       e8 a8 fb ff ff          call   1110 <__stack_chk_fail@plt>
+    1568:       48 8b 45 b8             mov    rax,QWORD PTR [rbp-0x48]
+    156c:       48 83 c4 48             add    rsp,0x48
+    1570:       5b                      pop    rbx
+    1571:       41 5c                   pop    r12
+    1573:       41 5d                   pop    r13
+    1575:       5d                      pop    rbp
+    1576:       c3                      ret    

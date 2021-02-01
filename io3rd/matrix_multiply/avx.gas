@@ -1,0 +1,59 @@
+0000000000001320 <multiply_matrix(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&)>:
+    1320:       f3 0f 1e fa             endbr64 
+    1324:       55                      push   rbp
+    1325:       48 89 fd                mov    rbp,rdi
+    1328:       bf 00 00 00 01          mov    edi,0x1000000
+    132d:       53                      push   rbx
+    132e:       48 89 f3                mov    rbx,rsi
+    1331:       48 83 ec 08             sub    rsp,0x8
+    1335:       e8 a6 fd ff ff          call   10e0 <operator new(unsigned long)@plt>
+    133a:       ba 00 00 00 01          mov    edx,0x1000000
+    133f:       31 f6                   xor    esi,esi
+    1341:       48 89 c7                mov    rdi,rax
+    1344:       e8 77 fd ff ff          call   10c0 <memset@plt>
+    1349:       48 89 ee                mov    rsi,rbp
+    134c:       c5 e9 ef d2             vpxor  xmm2,xmm2,xmm2
+    1350:       49 89 c0                mov    r8,rax
+    1353:       48 89 c2                mov    rdx,rax
+    1356:       4c 8d 88 00 00 00 01    lea    r9,[rax+0x1000000]
+    135d:       31 c0                   xor    eax,eax
+    135f:       90                      nop
+    1360:       48 8d 7a 08             lea    rdi,[rdx+0x8]
+    1364:       48 89 d1                mov    rcx,rdx
+    1367:       48 c7 02 00 00 00 00    mov    QWORD PTR [rdx],0x0
+    136e:       49 89 da                mov    r10,rbx
+    1371:       48 c7 82 f8 1f 00 00 00 00 00 00        mov    QWORD PTR [rdx+0x1ff8],0x0
+    137c:       48 83 e7 f8             and    rdi,0xfffffffffffffff8
+    1380:       48 29 f9                sub    rcx,rdi
+    1383:       81 c1 00 20 00 00       add    ecx,0x2000
+    1389:       c1 e9 03                shr    ecx,0x3
+    138c:       f3 48 ab                rep stos QWORD PTR es:[rdi],rax
+    138f:       31 ff                   xor    edi,edi
+    1391:       0f 1f 80 00 00 00 00    nop    DWORD PTR [rax+0x0]
+    1398:       c5 f9 6e ef             vmovd  xmm5,edi
+    139c:       c4 e2 79 18 1c be       vbroadcastss xmm3,DWORD PTR [rsi+rdi*4]
+    13a2:       31 c9                   xor    ecx,ecx
+    13a4:       c5 f9 70 c5 00          vpshufd xmm0,xmm5,0x0
+    13a9:       c5 f9 76 c2             vpcmpeqd xmm0,xmm0,xmm2
+    13ad:       c5 f9 df 24 0a          vpandn xmm4,xmm0,XMMWORD PTR [rdx+rcx*1]
+    13b2:       c4 c2 61 40 0c 0a       vpmulld xmm1,xmm3,XMMWORD PTR [r10+rcx*1]
+    13b8:       c5 f1 fe cc             vpaddd xmm1,xmm1,xmm4
+    13bc:       c5 f8 11 0c 0a          vmovups XMMWORD PTR [rdx+rcx*1],xmm1
+    13c1:       48 83 c1 10             add    rcx,0x10
+    13c5:       48 81 f9 00 20 00 00    cmp    rcx,0x2000
+    13cc:       75 df                   jne    13ad <multiply_matrix(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&)+0x8d>
+    13ce:       48 83 c7 01             add    rdi,0x1
+    13d2:       49 81 c2 00 20 00 00    add    r10,0x2000
+    13d9:       48 81 ff 00 08 00 00    cmp    rdi,0x800
+    13e0:       75 b6                   jne    1398 <multiply_matrix(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&)+0x78>
+    13e2:       48 81 c2 00 20 00 00    add    rdx,0x2000
+    13e9:       48 81 c6 00 20 00 00    add    rsi,0x2000
+    13f0:       4c 39 ca                cmp    rdx,r9
+    13f3:       0f 85 67 ff ff ff       jne    1360 <multiply_matrix(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&)+0x40>
+    13f9:       48 83 c4 08             add    rsp,0x8
+    13fd:       be 00 00 00 01          mov    esi,0x1000000
+    1402:       4c 89 c7                mov    rdi,r8
+    1405:       5b                      pop    rbx
+    1406:       5d                      pop    rbp
+    1407:       e9 e4 fc ff ff          jmp    10f0 <operator delete(void*, unsigned long)@plt>
+    140c:       0f 1f 40 00             nop    DWORD PTR [rax+0x0]

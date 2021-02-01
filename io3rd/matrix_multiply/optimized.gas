@@ -1,0 +1,61 @@
+1320:       f3 0f 1e fa             endbr64 
+    1324:       55                      push   rbp
+    1325:       48 89 fd                mov    rbp,rdi
+    1328:       bf 00 00 00 01          mov    edi,0x1000000
+    132d:       53                      push   rbx
+    132e:       48 89 f3                mov    rbx,rsi
+    1331:       48 83 ec 08             sub    rsp,0x8
+    1335:       e8 a6 fd ff ff          call   10e0 <operator new(unsigned long)@plt>
+    133a:       48 89 ee                mov    rsi,rbp
+    133d:       49 89 c0                mov    r8,rax
+    1340:       48 89 c2                mov    rdx,rax
+    1343:       4c 8d 88 00 00 00 01    lea    r9,[rax+0x1000000]
+    134a:       31 c0                   xor    eax,eax
+    134c:       0f 1f 40 00             nop    DWORD PTR [rax+0x0]
+    1350:       48 8d 7a 08             lea    rdi,[rdx+0x8]
+    1354:       48 89 d1                mov    rcx,rdx
+    1357:       48 c7 02 00 00 00 00    mov    QWORD PTR [rdx],0x0
+    135e:       4c 8d 9a 00 20 00 00    lea    r11,[rdx+0x2000]
+    1365:       48 c7 82 f8 1f 00 00 00 00 00 00        mov    QWORD PTR [rdx+0x1ff8],0x0
+    1370:       48 83 e7 f8             and    rdi,0xfffffffffffffff8
+    1374:       48 29 f9                sub    rcx,rdi
+    1377:       81 c1 00 20 00 00       add    ecx,0x2000
+    137d:       c1 e9 03                shr    ecx,0x3
+    1380:       f3 48 ab                rep stos QWORD PTR es:[rdi],rax
+    1383:       48 89 d9                mov    rcx,rbx
+    1386:       66 2e 0f 1f 84 00 00 00 00 00   nop    WORD PTR cs:[rax+rax*1+0x0]
+    1390:       49 89 f2                mov    r10,rsi
+    1393:       48 89 cf                mov    rdi,rcx
+    1396:       66 0f ef db             pxor   xmm3,xmm3
+    139a:       48 8d a9 00 00 00 01    lea    rbp,[rcx+0x1000000]
+    13a1:       66 41 0f 6e 22          movd   xmm4,DWORD PTR [r10]
+    13a6:       f3 0f 6f 0f             movdqu xmm1,XMMWORD PTR [rdi]
+    13aa:       49 83 c2 04             add    r10,0x4
+    13ae:       48 81 c7 00 20 00 00    add    rdi,0x2000
+    13b5:       f3 0f 6f 87 00 e0 ff ff         movdqu xmm0,XMMWORD PTR [rdi-0x2000]
+    13bd:       66 0f 70 d4 00          pshufd xmm2,xmm4,0x0
+    13c2:       66 0f f4 ca             pmuludq xmm1,xmm2
+    13c6:       66 0f 73 d0 20          psrlq  xmm0,0x20
+    13cb:       66 0f 73 d2 20          psrlq  xmm2,0x20
+    13d0:       66 0f f4 c2             pmuludq xmm0,xmm2
+    13d4:       66 0f 70 c9 08          pshufd xmm1,xmm1,0x8
+    13d9:       66 0f 70 c0 08          pshufd xmm0,xmm0,0x8
+    13de:       66 0f 62 c8             punpckldq xmm1,xmm0
+    13e2:       66 0f fe d9             paddd  xmm3,xmm1
+    13e6:       48 39 ef                cmp    rdi,rbp
+    13e9:       75 b6                   jne    13a1 <multiply_matrix(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&)+0x81>
+    13eb:       0f 11 1a                movups XMMWORD PTR [rdx],xmm3
+    13ee:       48 83 c2 10             add    rdx,0x10
+    13f2:       48 83 c1 10             add    rcx,0x10
+    13f6:       4c 39 da                cmp    rdx,r11
+    13f9:       75 95                   jne    1390 <multiply_matrix(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&)+0x70>
+    13fb:       48 81 c6 00 20 00 00    add    rsi,0x2000
+    1402:       49 39 d1                cmp    r9,rdx
+    1405:       0f 85 45 ff ff ff       jne    1350 <multiply_matrix(std::array<std::array<int, 2048ul>, 2048ul> const&, std::array<std::array<int, 2048ul>, 2048ul> const&)+0x30>
+    140b:       48 83 c4 08             add    rsp,0x8
+    140f:       be 00 00 00 01          mov    esi,0x1000000
+    1414:       4c 89 c7                mov    rdi,r8
+    1417:       5b                      pop    rbx
+    1418:       5d                      pop    rbp
+    1419:       e9 d2 fc ff ff          jmp    10f0 <operator delete(void*, unsigned long)@plt>
+    141e:       66 90                   xchg   ax,ax
