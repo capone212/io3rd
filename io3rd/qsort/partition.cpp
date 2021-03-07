@@ -1,41 +1,60 @@
 #include <iostream>
 #include <span>
+#include <algorithm>
 #include <vector>
+#include <random>
 
-void print(const auto& list) {
-    for (const auto& l : list) {
-        std::cout << l << "," ;
-    }
-    std::cout << std::endl;
-}
-
-int partition(const std::span<int>& span) {
+int partition(std::span<int> span) {
     if (span.empty()) {
         throw std::runtime_error("invalid input");
     }
     auto x = span.back();
-    int k1 = 0;
+    int k = 0;
     // move all elements that are less than to beginig
     for (int& i : span.first(span.size()-1)) {
-        if (i < x) {
-            std::swap(i, span[k1++]);
-        }
-    }
-    int k2 = k1;
-    for (int& i : span.last(span.size()-k1)) {
         if (i <= x) {
-            std::swap(i, span[k2++]);
+            std::swap(i, span[k++]);
         }
     }
-    std::cout << "k1=" << k1 << " k2=" << k2 << std::endl;
-    return (k1 + k2) / 2;
+    std::swap(span[k], span.back());
+    return k;
 }
 
+inline void insertion_sort(std::span<int> span) {
+    int key, j;
+    for(int i = 1; i<span.size(); i++) {
+        key = span[i];//take value
+        j = i;
+        while(j > 0 && span[j-1]>key) {
+            span[j] = span[j-1];
+            j--;
+        }
+        span[j] = key;   //insert in right place
+    }
+}
+
+
+void qsort(std::span<int> span) {
+    if (span.size() < 8) {
+        insertion_sort(span);
+        return;
+    }
+    int pivot = partition(span);
+    qsort(span.first(pivot));
+    qsort(span.last(span.size() - pivot - 1));
+}
+
+
+
 int main() {
-    // std::vector<int> buffer = {6,8,9,5,2,4,7};
-    std::vector<int> buffer = {7};
-    int q = partition(buffer);
-    std::cout << "partitioned over pivot:" << buffer[q] << " with index:" << q << std::endl;
-    print(buffer);
+    std::vector<int> buffer;
+    buffer.resize(100*1024*1024);
+    for (int& i : buffer) {
+        i = rand();
+    }
+    std::cout << "Sorted started..." << std::endl;
+    // std::sort(buffer.begin(), buffer.end());
+    qsort(buffer);
+    std::cout << "Sorted: " << std::is_sorted(buffer.begin(), buffer.end()) << std::endl;
     return 0;
 }
