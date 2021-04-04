@@ -21,7 +21,8 @@ int partition(std::span<int> span) {
     return k;
 }
 
-// order=[0, n-1]
+// param: order=[0, n-1]
+// param: complexity is for debug and should be removed
 int rand_select(std::span<int> span, int order, std::int64_t& complexity) {
     complexity += span.size();
 
