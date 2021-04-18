@@ -4,6 +4,7 @@
 #include <vector>
 #include <random>
 #include <ranges>
+#include <cassert>
 
 const int MAX_DIGIT = 32*1024;
 
@@ -41,6 +42,32 @@ std::vector<int> counting_sort_stable(std::span<int> span) {
     return result;
 }
 
+// Get n-th byte from integer
+inline int nth_byte(int number, int n) {
+    return (number >> (8*n)) & 0xff;
+}
+
+void radix_sort(std::span<int> span) {
+    using buffer_t = std::vector<int>;
+    std::vector<buffer_t> rstore;
+    rstore.resize(256);
+    for (int d = 0; d < 4; ++d) {
+        // Map to location
+        for (int i : span) {
+            rstore[nth_byte(i, d)].push_back(i);
+        }
+        // Copy back in order
+        int index = 0;
+        for (auto& batch : rstore) {
+            for (int x : batch) {
+                span[index++] = x;
+            }
+            batch.clear();
+        }
+        assert(index == span.size());
+    } 
+}
+
 void print(const auto& list) {
     for (const auto& l : list) {
         std::cout << l << "," ;
@@ -49,16 +76,21 @@ void print(const auto& list) {
 }
 
 int main() {
-    // std::vector<int> buffer;
-    // buffer.resize(1024*1024*1024);
-    // for (int& i : buffer) {
-    //     i = rand() % MAX_DIGIT;
-    // }
-    std::vector<int> buffer = {2,3,5,3,2,1,46,7};
+
+    std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+    std::uniform_int_distribution<> distrib(0);
+
+    std::vector<int> buffer;
+    buffer.resize(1024*1024*1024);
+    for (int& i : buffer) {
+        i = distrib(gen);
+    }
+    // std::vector<int> buffer = {32343441, 2,3,5,3,2,1,46,7, 256, 1024, 32343434};
     std::cout << "Sorted started..." << std::endl;
     // counting_sort(buffer);
-    auto result = counting_sort_stable(buffer);
-    print(result);
-    std::cout << "Sorted: " << std::is_sorted(result.begin(), result.end()) << std::endl;
+    radix_sort(buffer);
+    // print(buffer);
+    std::cout << "Sorted: " << std::is_sorted(buffer.begin(), buffer.end()) << std::endl;
     return 0;
 }

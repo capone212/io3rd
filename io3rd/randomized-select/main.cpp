@@ -22,10 +22,7 @@ int partition(std::span<int> span) {
 }
 
 // param: order=[0, n-1]
-// param: complexity is for debug and should be removed
-int rand_select(std::span<int> span, int order, std::int64_t& complexity) {
-    complexity += span.size();
-
+int rand_select(std::span<int> span, int order) {
     if (span.size() == 1) {
         assert(order == 0);
         return span.front();
@@ -35,26 +32,41 @@ int rand_select(std::span<int> span, int order, std::int64_t& complexity) {
         return span[pivot];
     }
     if (pivot > order) {
-        return rand_select(span.first(pivot), order, complexity);
+        return rand_select(span.first(pivot), order);
     } else {
-        return rand_select(span.last(span.size() - pivot - 1), order - pivot - 1, complexity);
+        return rand_select(span.last(span.size() - pivot - 1), order - pivot - 1);
     }
 }
 
-
+int rand_select_non_recursive(std::span<int> span, int order) {
+    while (true) {
+        if (span.size() == 1) {
+            return span.front();
+        }
+        int pivot = partition(span);
+        if (pivot == order) {
+            return span[pivot];
+        }
+        if (pivot > order) {
+            span = span.first(pivot);
+        } else {
+            span = span.last(span.size() - pivot - 1);
+            order -= pivot + 1;
+        }
+    }
+}
 
 int main() {
     srand (time(NULL));
     std::cout << "Init" <<  std::endl;
     std::vector<int> buffer;
-    buffer.resize(800*1024*1024);
+    buffer.resize(100*1024*1024);
     for (int& i : buffer) {
         i = rand();
     }
     std::cout << "Starting calc..." <<  std::endl;
-    int order = 2695;
-    std::int64_t complexity = 0;
-    int result_linear = rand_select(buffer, order, complexity);
-    std::cout << "Result linear: " << result_linear << " complexity:" << double(complexity/1024/1024)/(buffer.size()/1024/1024) <<  std::endl;
+    int order = 50*1024*1024;
+    std::cout << "Result recursive: " << rand_select(buffer, order) << std::endl;
+    // std::cout << "Result non-recursive: " << rand_select_non_recursive(buffer, order) << std::endl;
     return 0;
 }
