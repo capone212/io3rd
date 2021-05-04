@@ -22,6 +22,17 @@ void insert(TNodePtr& node, int key, TNodePtr parent = nullptr) {
     }
 }
 
+TNodePtr search(TNodePtr& node, int key) {
+    if (node == nullptr || node->key == key) {
+        return node;
+    }
+    if (key < node->key) {
+        return search(node->left, key);
+    } else {
+        return search(node->rigth, key);
+    }
+}
+
 void traverse(TNodePtr node) {
     if (node == nullptr) {
         return;
@@ -73,16 +84,14 @@ void traverse_non_recursive(TNodePtr root, auto handleKey) {
 }
 
 
+
+
 int main() {
     const std::vector<int> values = {4, 5, 1, 2, 5, 3, 10};
     TNodePtr root = nullptr;
     for (int v : values) {
         insert(root, v);
     }
-    traverse(root);
-    std::cout << "Traverse non recursive" << std::endl; 
-    traverse_non_recursive(root, [](int key) {
-        std::cout << key << std::endl;
-    });
+    std::cout << search(root, 10)->key << std::endl;
     return 0;
 }
