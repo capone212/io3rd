@@ -75,15 +75,7 @@ std::string LCS_dp_bottom_up(std::string_view left, std::string_view right) {
             memo[i][j] = lcs; 
         }
     }
-    std::string max;
-    const int last = left.size() - 1;
-    for (int j = 0; j < right.size(); ++j) {
-        const auto& underdog = memo[last][j];
-        if (underdog.size() > max.size()) {
-            max = underdog;
-        }
-    }
-    return max;
+    return memo[left.size()-1][right.size()-1];
 }
 
 int main() {
