@@ -45,17 +45,11 @@ std::string LCS_dp_top_down(std::string_view left, std::string_view right, memo_
 using prefixes_t = std::vector<std::string>;
 using flat_memo_t =  std::vector<prefixes_t>;
 
-std::string get_sub_max(int max_row, int max_column, const flat_memo_t& memo) {
-    std::string max;
-    for (int i = 0; i < max_row; ++i) {
-        for (int j = 0; j < max_column; ++j) {
-            const auto& underdog = memo[i][j];
-            if (underdog.size() > max.size()) {
-                max = underdog;
-            }
-        }
+std::string_view get(int row, int column, const flat_memo_t& memo) {
+    if (row < 0 || column < 0) {
+        return {};
     }
-    return max;
+    return memo[row][column];
 }
 
 std::string LCS_dp_bottom_up(std::string_view left, std::string_view right) {
@@ -69,9 +63,14 @@ std::string LCS_dp_bottom_up(std::string_view left, std::string_view right) {
     }
     for (int i = 0; i < left.size(); ++i) {
         for (int j = 0; j < right.size(); ++j) {
-            auto lcs = get_sub_max(i, j, memo);
+            std::string lcs;
             if (left[i] == right[j]) {
+                lcs = get(i-1, j-1, memo);
                 lcs += left[i];
+            } else {
+                auto vl = get(i-1, j, memo);
+                auto vr = get(i, j-1, memo);
+                lcs = (vl.size() > vr.size() ? vl : vr);
             }
             memo[i][j] = lcs; 
         }
