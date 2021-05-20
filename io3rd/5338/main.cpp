@@ -26,6 +26,9 @@ public:
     }
 
     int sample() const {
+        if (Value2Index.empty()) {
+            throw std::runtime_error("empty!");
+        }
         while (true)
         {
             int index = rand() %  ValuesVector.size();
@@ -36,7 +39,7 @@ public:
     }
 
     void reconcile() {
-        if (ValuesVector.size() / 2 > Value2Index.size()) {
+        if (ValuesVector.size() / 2 < Value2Index.size()) {
             return;
         }
 
@@ -53,6 +56,46 @@ public:
 private:
     std::unordered_map<int /*value */, std::size_t /*index*/> Value2Index;
     std::vector<std::optional<int>> ValuesVector;
+};
+
+
+struct SampleableSetConstantTime {
+public:
+    void insert(int value) {
+        auto index = ValuesVector.size();
+        ValuesVector.push_back(value);
+        Value2Index[value] = index;
+    }
+
+    void remove(int value) {
+        auto it = Value2Index.find(value);
+        if (it == Value2Index.end()) {
+            return;
+        }
+        auto index = it->second;
+        Value2Index.erase(it);
+        if (index != ValuesVector.size() - 1) {
+            std::swap(ValuesVector[index], ValuesVector[ValuesVector.size() - 1]);
+        }
+        ValuesVector.resize(ValuesVector.size() - 1);
+    }
+
+    bool contains(int value) const {
+        return Value2Index.find(value) != Value2Index.end();
+    }
+
+    int sample() const {
+        if (Value2Index.empty()) {
+            throw std::runtime_error("empty!");
+        }
+        int index = rand() %  ValuesVector.size();
+        return ValuesVector[index];
+    }
+
+
+private:
+    std::unordered_map<int /*value */, std::size_t /*index*/> Value2Index;
+    std::vector<int> ValuesVector;
 };
 
 int main() {
