@@ -2,6 +2,7 @@
 #include <vector>
 #include <functional>
 #include <unordered_set>
+#include <unordered_map>
 #include <deque>
 
 
@@ -42,14 +43,16 @@ struct TGraph {
     }
 };
 
-using TVisitor = std::function<bool(TGraph::TVertextId id, const TGraph::TVertexValue& value, int distance)>;
+using TVisitor = std::function<bool(TGraph::TVertextId id, const TGraph::TVertexValue& value, TGraph::TVertextId parent, int distance)>;
 void BFS(const TGraph& g, TGraph::TVertextId startingPoint, TVisitor visitor) {
     struct TVertextRuntimeAttr {
         bool Seen = false;
         int Distance = 0;
+        TGraph::TVertextId Parent = 0;
     };
     std::deque<TGraph::TVertextId> queue;
-    std::vector<TVertextRuntimeAttr> runtimeAttr(g.Vertices.size()); 
+    std::vector<TVertextRuntimeAttr> runtimeAttr(g.Vertices.size());
+    runtimeAttr[startingPoint].Parent = startingPoint;
     queue.push_back(startingPoint);
     while (!queue.empty()) {
         auto current = queue.front();
@@ -61,14 +64,16 @@ void BFS(const TGraph& g, TGraph::TVertextId startingPoint, TVisitor visitor) {
         }
         attr.Seen = true;
         const auto& vertex = g.Vertices[current];
-        if (!visitor(current, vertex.Value, attr.Distance)) {
+        if (!visitor(current, vertex.Value, attr.Parent, attr.Distance)) {
             // Interrapted by cliet code.
             break;
         }
 
         for (auto v : vertex.Adj) {
             queue.push_back(v);
-            runtimeAttr[v].Distance = attr.Distance + 1;
+            auto& vattr = runtimeAttr[v];
+            vattr.Distance = attr.Distance + 1;
+            vattr.Parent = current;
         }
     }
 }
@@ -96,11 +101,24 @@ int main() {
     g.AddEdge(x, y);
     g.AddEdge(u, y);
     
-    
-    BFS(g, r, [](TGraph::TVertextId id, const TGraph::TVertexValue& value, int distance) {
-        std::cout << "Node id: " <<  id << " value: " << value << " distance:" << distance << std::endl;
+    BFS(g, r, [](TGraph::TVertextId id, const TGraph::TVertexValue& value, TGraph::TVertextId parent, int distance) {
+        std::cout << "Node id:" <<  id << " Parent:" << parent << " value:" << value << " distance:" << distance << std::endl;
         return true;
     });
+
+    auto startpoint = r;
+    auto destination = w;
+    std::unordered_map<TGraph::TVertextId, TGraph::TVertextId> relations;
+    BFS(g, r, [destination, &relations](TGraph::TVertextId id, const TGraph::TVertexValue& value, TGraph::TVertextId parent, int distance) {
+        relations[id] = parent;
+        return id != destination;
+    });
+    auto current = destination;
+    while (current != startpoint) {
+        std::cout << current << " ";
+        current = relations.at(current); 
+    }
+    std::cout << startpoint << std::endl;
 
     return 0;
 }
