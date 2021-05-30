@@ -196,20 +196,5 @@ int main() {
         }
         std::cout << std::endl;
     }
-
-    // auto startpoint = r;
-    // auto destination = w;
-    // std::unordered_map<TGraph::TVertextId, TGraph::TVertextId> relations;
-    // DFS(g, r, [destination, &relations](TGraph::TVertextId id, const TGraph::TVertexValue& value, bool begin, std::size_t timestamp) {
-    //     relations[id] = parent;
-    //     return id != destination;
-    // });
-    // auto current = destination;
-    // while (current != startpoint) {
-    //     std::cout << current << " ";
-    //     current = relations.at(current); 
-    // }
-    // std::cout << startpoint << std::endl;
-
     return 0;
 }
