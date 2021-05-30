@@ -14,41 +14,52 @@ struct DisjointSet {
         node->ds.Parent = node;
         node->ds.Rank = 0;
     }
+    
+    void MakeSet(TNode& node) {
+        MakeSet(&node);
+    }
 
     TNode* FindSet(TNode* node) {
         TNode* theParent = node;
-        while (theParent->Parent != node) {
-            theParent = theParent->Parent;
+        // Find representative of the set (father of fathers)
+        while (theParent->ds.Parent != theParent) {
+            theParent = theParent->ds.Parent;
         }
+        // Path compression for nodes
         while (node != theParent) {
             auto* tmp = node;
-            node = node->Parent;
-            tmp->Parent = theParent;
+            node = node->ds.Parent;
+            tmp->ds.Parent = theParent;
         }
         return theParent;
     }
 
-    void Union(TNode* x,  TNode* y) {
-        Link(FindSet(x), FindSet(y));
+    bool Union(TNode* x,  TNode* y) {
+        return Link(FindSet(x), FindSet(y));
+    }
+    
+    bool Union(TNode& x,  TNode& y) {
+        return Union(&x, &y);
     }
 
 private:
-    void Link(TNode* x,  TNode* y) {
-        if (x->Rank > y->Rank) {
-            y->Parent = x;
+    bool Link(TNode* x,  TNode* y) {
+        if (x == y) {
+            return false;
+        } 
+        if (x->ds.Rank > y->ds.Rank) {
+            y->ds.Parent = x;
         } else {
-            x->Parent = y;
+            x->ds.Parent = y;
         }
-        if (x->Rank == y->Rank) {
-            y->Rank += 1; 
+        if (x->ds.Rank == y->ds.Rank) {
+            y->ds.Rank += 1; 
         }
+        return true;
     }
-
-
-private:
-    TAccessor Accessor;
 };
 
 int main() {
+    // try to solve https://leetcode.com/problems/redundant-connection/submissions/ with DS
     std::cout << "hello world!" << std::endl;
 }
