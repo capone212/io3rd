@@ -50,6 +50,7 @@ struct TNode {
     }
 
     void add_left(TNode* node) {
+        assert(node != this);
         left = node;
         auto* old_parent = node ? node->parent : nullptr;
         node->parent = this;
@@ -57,6 +58,7 @@ struct TNode {
     }
 
     void add_right(TNode* node) {
+        assert(node != this);
         right = node;
         auto* old_parent = node ? node->parent : nullptr;
         node->parent = this;
@@ -85,11 +87,17 @@ public:
         for (const auto& t : tokenized) {
             treeHolder.push_back(TNode{.Token = t});
             current = chain(current, &treeHolder.back());
+            print_from_root(current);
         }
+        current = get_root(current);
+        // print_from_root(current);
+        return compute(current);
+    }
+
+    void print_from_root(TNode* current) {
         current = get_root(current);
         print_tree(current);
         std::cout << std::endl;
-        return compute(current);
     }
 
     TNode* get_root(TNode* node) {
@@ -99,6 +107,26 @@ public:
         return node;
     }
 
+    TNode* get_right_most_op(TNode* node) {
+        while (node && node->right) {
+            if (node->right->Is<TInteger>()) {
+                break;
+            }
+            node = node->right;
+        }
+        return node;
+    }
+
+    TNode* get_right_most_digit(TNode* node) {
+        while (node && node->right) {
+            node = node->right;
+        }
+        if (node->Is<TInteger>()) {
+            return node;
+        }
+        return nullptr;
+    }
+
     std::int64_t compute(TNode* current) {
         if (!current) {
             return 0;
@@ -106,9 +134,11 @@ public:
         if (current->Is<TOpPlus>()) {
             return compute_summ(current);
         }
-        
         if (current->Is<TOpMinus>()) {
             return compute_difference(current);
+        }
+        if (current->Is<TOpMultiply>()) {
+            return compute_product(current);
         }
 
         if (current->Is<TInteger>()) {
@@ -133,6 +163,7 @@ public:
             print_tree(current->left);
             std::cout << " + ";
             print_tree(current->right);
+            std::cout << "]";
             return;
         }
 
@@ -144,6 +175,16 @@ public:
             std::cout << "]";
             return;
         }
+
+         if (current->Is<TOpMultiply>()) {
+            std::cout << "[";
+            print_tree(current->left);
+            std::cout << " * ";
+            print_tree(current->right);
+            std::cout << "]";
+            return;
+        }
+        assert(false);
     }
 
     std::int64_t compute_summ(TNode* current) {
@@ -156,6 +197,18 @@ public:
             summ += compute(current->right);
         }
         return summ;
+    }
+
+    std::int64_t compute_product(TNode* current) {
+        std::int64_t product = 1;
+        if (current->left) {
+            product *= compute(current->left);
+        }
+
+        if (current->right) {
+            product *= compute(current->right);
+        }
+        return product;
     }
 
     std::int64_t compute_difference(TNode* current) {
@@ -176,30 +229,29 @@ public:
             return node;
         }
         
-        // {
-            
-        // }
-        
-        if (bool isDigit = node->Is<TInteger>()) {
-            if (current->left == nullptr) {
-                current->add_left(node);
+        if (node->Is<TInteger>()) {
+            if (auto* rightmost = get_right_most_op(current); rightmost && rightmost->right == nullptr) {
+                rightmost->add_right(node);
                 return current;
             }
-
-            if (current->right == nullptr) {
-                current->add_right(node);
-                return current;
-            }
-            assert(!isDigit);
+            assert(false);
             return nullptr;
         }
 
         if (node->Is<TOpPlus>() || node->Is<TOpMinus>()) {
+            if (auto* rightmost = get_right_most_op(current); !current->Is<TInteger>() && !rightmost->right) {
+                rightmost->add_right(node);
+                return current;
+            }
             node->add_left(current);
             return node;
         }
 
         if (node->Is<TOpMultiply>()) {
+            if (auto* righmost = get_right_most_digit(current);  !current->Is<TInteger>() && righmost) {
+                node->add_left(righmost);
+                return current;
+            }
             node->add_left(current);
             return node;
         }
@@ -253,8 +305,19 @@ int main() {
         // {"+2+1+2+4", 9},
         // {"1-2", -1},
         // {"2-1", 1},
-        {"-2-1", -3},
+        // {"-2-1", -3},
         // {"2+1-10", -7},
+        // {"2*1", 2},
+        // {"-2*1", -2},
+        // {"-2*-1", 2},
+        // {"-2*--1", -2},
+        // {"--2*--1", 2},
+        // {"2*3+4", 10},
+        // {"2+3*4", 14},
+        // {"2*2+3*4", 16},
+        // {"-2*-2*-3*4", -48},
+        // {"-2*-2*-3*-4", 48},
+        {"---2*--2*---3", 12},
     };
     for (const auto&[expr, expected] : test_cases) {
         const int result = solution.calculate(expr);
