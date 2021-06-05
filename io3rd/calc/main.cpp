@@ -12,6 +12,7 @@ struct TInteger {
 };
 
 struct TParOpen {
+    bool Closed = false;
 };
 
 struct TParClosed {
@@ -71,7 +72,7 @@ struct TNode {
         }
         old_parent->replace(node, this);
         assert(!parent);
-        node->parent = old_parent;
+        parent = old_parent;
     }
 };
 
@@ -87,7 +88,7 @@ public:
         for (const auto& t : tokenized) {
             treeHolder.push_back(TNode{.Token = t});
             current = chain(current, &treeHolder.back());
-            print_from_root(current);
+            // print_from_root(current);
         }
         current = get_root(current);
         // print_from_root(current);
@@ -127,6 +128,17 @@ public:
         return nullptr;
     }
 
+    TNode* get_first_par_open(TNode* node) {
+        while (node && node->parent) {
+            if (is_open_parenthesis(node)) {
+                return node;
+            }
+            node = node->parent;
+        }
+        assert(node);
+        return node;
+    }
+
     std::int64_t compute(TNode* current) {
         if (!current) {
             return 0;
@@ -143,6 +155,11 @@ public:
 
         if (current->Is<TInteger>()) {
             return std::get<TInteger>(current->Token).Value;
+        }
+
+        if (current->Is<TParOpen>()) {
+            assert(!current->left);
+            return compute(current->right);
         }
 
         assert(false);
@@ -176,7 +193,7 @@ public:
             return;
         }
 
-         if (current->Is<TOpMultiply>()) {
+        if (current->Is<TOpMultiply>()) {
             std::cout << "[";
             print_tree(current->left);
             std::cout << " * ";
@@ -184,7 +201,19 @@ public:
             std::cout << "]";
             return;
         }
+
+        if (current->Is<TParOpen>()) {
+            std::cout << " ( ";
+            print_tree(current->right);
+            assert(current->left == nullptr);
+            std::cout << " ) ";
+            return;
+        }
         assert(false);
+    }
+
+    bool is_open_parenthesis(TNode* current) {
+        return current->Is<TParOpen>() && !std::get<TParOpen>(current->Token).Closed;
     }
 
     std::int64_t compute_summ(TNode* current) {
@@ -232,6 +261,9 @@ public:
         if (node->Is<TInteger>()) {
             if (auto* rightmost = get_right_most_op(current); rightmost && rightmost->right == nullptr) {
                 rightmost->add_right(node);
+                if (rightmost->Is<TParOpen>()) {
+                    return node;
+                }
                 return current;
             }
             assert(false);
@@ -243,7 +275,11 @@ public:
                 rightmost->add_right(node);
                 return current;
             }
-            node->add_left(current);
+            if (is_open_parenthesis(current)) {
+                node->add_left(current->right);
+            } else {
+                node->add_left(current);
+            }
             return node;
         }
 
@@ -255,6 +291,22 @@ public:
             node->add_left(current);
             return node;
         }
+        if (node->Is<TParOpen>()) {
+            if (auto* rightmost = get_right_most_op(current); rightmost && rightmost->right == nullptr) {
+                rightmost->add_right(node);
+                return node;
+            }
+            assert(false);
+            return nullptr;
+        }
+        if (node->Is<TParClosed>()) {
+           auto* result = get_first_par_open(current);
+           auto& isClosed = std::get<TParOpen>(result->Token).Closed;
+           assert(!isClosed);
+           isClosed = true;
+           return get_first_par_open(result);
+        }
+
         assert(false);
         return nullptr;
     }
@@ -317,8 +369,18 @@ int main() {
         // {"2*2+3*4", 16},
         // {"-2*-2*-3*4", -48},
         // {"-2*-2*-3*-4", 48},
-        {"---2*--2*---3", 12},
+        // {"---2*--2*---3", 12},
+        // {"(1+2) + 3", 6},
+        // {"(-1+2) + 3", 4},
+        // {"(--1+2) + 3", 6},
+        // {"-(-1+2) + 3", 2},
+        // {"- (3 + (4 + 5))", -12},
+        // {"-(1) + 3", 2},
+        // {"--(-1+2) + 3", 4},
+        // {"--(-(1+2))- (1)", -4},
     };
+
+    // TODO: add paranthesis
     for (const auto&[expr, expected] : test_cases) {
         const int result = solution.calculate(expr);
         if (result != expected) {
