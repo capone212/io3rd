@@ -86,6 +86,10 @@ TGraph::TAdjacencyMatrix slow_all_pairs_shortest_path(const TGraph& graph) {
     return paths;
 }
 
+TGraph::TAdjacencyMatrix faster_all_pairs_shortest_path(const TGraph& graph) {
+
+}
+
 int main() {
     TGraph graph;    
     auto s = graph.AddVertex("s");
