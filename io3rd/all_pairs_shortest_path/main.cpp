@@ -87,7 +87,14 @@ TGraph::TAdjacencyMatrix slow_all_pairs_shortest_path(const TGraph& graph) {
 }
 
 TGraph::TAdjacencyMatrix faster_all_pairs_shortest_path(const TGraph& graph) {
-
+    std::size_t n = graph.Vertices.size();
+    std::size_t m = 1;
+    auto paths = graph.Adj;
+    while (m < n-1) {
+        paths = extend_shortest_path(paths, paths);
+        m = 2*m;
+    }
+    return paths;
 }
 
 int main() {
@@ -109,7 +116,7 @@ int main() {
     graph.AddEdge(z, x, 6);
     graph.AddEdge(z, s, 7);
     
-    auto paths = slow_all_pairs_shortest_path(graph);
+    auto paths = faster_all_pairs_shortest_path(graph);
 
     const auto& results = paths[s];
     for (TGraph::TVertextId v = 0; v < results.size(); ++v) {
