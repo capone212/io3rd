@@ -97,6 +97,25 @@ TGraph::TAdjacencyMatrix faster_all_pairs_shortest_path(const TGraph& graph) {
     return paths;
 }
 
+TGraph::TAdjacencyMatrix floyd_warshall(const TGraph& graph) {
+    const std::size_t vertexes_count = graph.Adj.size();
+    TGraph::TAdjacencyMatrix current = graph.Adj;
+    TGraph::TAdjacencyMatrix prev;
+    TGraph::init_adj(prev, vertexes_count);
+
+    for (std::size_t k = 0; k < vertexes_count; ++k) {
+        prev.swap(current);
+        for (std::size_t i = 0; i < vertexes_count; ++i) {
+            for (std::size_t j = 0; j < vertexes_count; ++j) {
+                current[i][j] = std::min(prev[i][j], prev[i][k] + prev[k][j]);
+            }
+        }
+
+    }
+    return prev;
+}
+
+
 int main() {
     TGraph graph;    
     auto s = graph.AddVertex("s");
