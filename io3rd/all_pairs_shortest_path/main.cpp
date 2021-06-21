@@ -102,7 +102,6 @@ TGraph::TAdjacencyMatrix floyd_warshall(const TGraph& graph) {
     TGraph::TAdjacencyMatrix current = graph.Adj;
     TGraph::TAdjacencyMatrix prev;
     TGraph::init_adj(prev, vertexes_count);
-
     for (std::size_t k = 0; k < vertexes_count; ++k) {
         prev.swap(current);
         for (std::size_t i = 0; i < vertexes_count; ++i) {
@@ -135,7 +134,7 @@ int main() {
     graph.AddEdge(z, x, 6);
     graph.AddEdge(z, s, 7);
     
-    auto paths = faster_all_pairs_shortest_path(graph);
+    auto paths = floyd_warshall(graph);
 
     const auto& results = paths[s];
     for (TGraph::TVertextId v = 0; v < results.size(); ++v) {
