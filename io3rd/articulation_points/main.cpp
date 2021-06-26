@@ -103,6 +103,8 @@ struct TDFSContext {
     }
     std::vector<TVertextAttr> Attr;
     std::vector<TEdgeAttr> EdgeAttr;
+    // Predecessor tree
+    TDirectedGraph PredTree;
 };
 
 using TVisitor = std::function<bool(TGraph::TVertextId id, const TGraph::TVertexValue& value, bool begin, std::size_t timestamp)>;
@@ -183,6 +185,13 @@ void DFS(const TGraph& g, TDFSContext& ctx) {
             ctx.EdgeAttr[e].edge_type = get_edge_type(edge.v1, edge.v2, ctx);
         }
     }
+    // Create pred tree
+    ctx.PredTree.Vertices.resize(g.Vertices.size());
+    for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
+        if (ctx.Attr[v].parent.vertex != TGraph::NIL_VERTEX_ID) {
+            ctx.PredTree.AddEdge(ctx.Attr[v].parent.vertex, v);
+        }
+    }
 }
 
 std::string to_string(TDFSContext::EEdgeType e) {
@@ -231,19 +240,7 @@ std::size_t calc_low(const TDirectedGraph& p_graph, TGraph::TVertextId v,  std::
     return low;
 }
 
-using vertex_set_t = std::unordered_set<TGraph::TVertextId>;
-vertex_set_t articulation_points(const TGraph& g) {
-    // Create predecessor tree
-    TDFSContext ctx{g};
-    DFS(g, ctx);
-    TDirectedGraph p_graph;
-    p_graph.Vertices.resize(g.Vertices.size());
-    for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
-        if (ctx.Attr[v].parent.vertex != TGraph::NIL_VERTEX_ID) {
-            p_graph.AddEdge(ctx.Attr[v].parent.vertex, v);
-        }
-    }
-
+std::vector<TLow> calc_all_lows(const TGraph& g, TDFSContext ctx) {
     // Calculate back leafs
     std::vector<TLow> lows;
     lows.resize(g.Vertices.size());
@@ -261,21 +258,43 @@ vertex_set_t articulation_points(const TGraph& g) {
         lows[edge.v2].back = l;
     }
     for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
-        calc_low(p_graph, v, lows);
+        calc_low(ctx.PredTree, v, lows);
     }
-    vertex_set_t index;
-    for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
-        if (ctx.Attr[v].parent.vertex == TGraph::NIL_VERTEX_ID) {
-            if (p_graph.Vertices[v].Adj.size() > 1) {
-                index.insert(v);
-            }
-        } else if (lows[v].InSync() && !ctx.Attr[v].IsLeath()) {
-            index.insert(v);
-        }
-    }
-    return index;
+    return lows;
 }
 
+using vertex_list_t = std::unordered_set<TGraph::TVertextId>;
+vertex_list_t get_articulation_points(const TGraph& g, const TDFSContext& ctx) {
+    auto lows = calc_all_lows(g, ctx);
+    vertex_list_t result;
+    for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
+        if (ctx.Attr[v].parent.vertex == TGraph::NIL_VERTEX_ID) {
+            if (ctx.PredTree.Vertices[v].Adj.size() > 1) {
+                result.insert(v);
+            }
+        } else if (lows[v].InSync() && !ctx.Attr[v].IsLeath()) {
+            result.insert(v);
+        }
+    }
+    return result;
+}
+
+std::vector<TGraph::TEdge> get_bridges(const TGraph& g) {
+    // Create predecessor tree
+    TDFSContext ctx{g};
+    DFS(g, ctx);
+    auto index = get_articulation_points(g, ctx);
+    auto is_critical = [&ctx, &index](TGraph::TVertextId v) {
+        return ctx.Attr[v].IsLeath() || index.count(v); 
+    };
+    std::vector<TGraph::TEdge> results;
+    for (auto e : g.Edges) {
+        if (is_critical(e.v1) || is_critical(e.v2)) {
+            results.push_back(e);
+        }
+    }
+    return results;
+}
 
 
 int main() {
@@ -291,15 +310,21 @@ int main() {
 
     graph.AddEdge(s, t);
     graph.AddEdge(s, u);
-    graph.AddEdge(u, v);
-    graph.AddEdge(v, w);
-    graph.AddEdge(w, s);
+    graph.AddEdge(s, u);
+    // graph.AddEdge(u, v);
+    // graph.AddEdge(v, w);
+    // graph.AddEdge(w, s);
 
-    auto articulations = articulation_points(graph);
+    // auto articulations = get_articulation_points(graph);
+    // for (auto v: articulations) {
+    //     std::cout << "Articulation vertex: " << graph.Vertices[v].Value << std::endl;
+    // }
 
-    for (auto v: articulations) {
-        std::cout << "Articulation vertex: " << graph.Vertices[v].Value << std::endl;
+    auto bridges = get_bridges(graph);
+    for (auto e: bridges) {
+        std::cout << "Bridge from vertex: " << graph.Vertices[e.v1].Value << " to " <<  graph.Vertices[e.v2].Value << std::endl;
     }
+
     return 0;
 }
 
