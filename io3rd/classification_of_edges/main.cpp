@@ -15,9 +15,12 @@ struct TGraphGeneric {
     using TVertextId = std::size_t;
     using TEdgeId = std::size_t;
 
+    constexpr static TVertextId NIL_VERTEX_ID = std::numeric_limits<TVertextId>::max();
+    constexpr static TEdgeId NIL_EDGE_ID = std::numeric_limits<TEdgeId>::max();
+
     struct TVertextPath {
-        TVertextId vertex = 0;
-        TEdgeId edge = 0;
+        TVertextId vertex = NIL_VERTEX_ID;
+        TEdgeId edge = NIL_EDGE_ID;
     };
     using TAdjacencyList = std::vector<TVertextPath>;
     struct TVertex {
@@ -67,14 +70,12 @@ struct TDFSContext {
         Gray,
         Black
     };
-
-    constexpr static TGraph::TVertextId NIL_PARENT = std::numeric_limits<std::size_t>::max();
     
     struct TVertextAttr {
         ECollor Seen = ECollor::White;
         std::size_t discovery_ts = 0;
         std::size_t finish_ts = 0;
-        TGraph::TVertextId parent = NIL_PARENT;
+        TGraph::TVertextPath parent;
     };
 
     enum struct EEdgeType {
@@ -139,17 +140,21 @@ void DFSVisit(const TGraph& g, TDFSContext& ctx, TGraph::TVertextId startingPoin
             continue;
         }
 
+        // Compute current edge type for white node
+        if (attr.parent.edge != TGraph::NIL_EDGE_ID && ctx.EdgeAttr[attr.parent.edge].edge_type == TDFSContext::EEdgeType::Unknown) {
+            ctx.EdgeAttr[attr.parent.edge].edge_type = get_edge_type(attr.parent.vertex, current, ctx);
+        }
         attr.Seen = TDFSContext::ECollor::Gray;
         attr.discovery_ts = ticker;
 
         for (auto v : vertex.Adj) {
             auto& vattr = ctx.Attr[v.vertex];
-            if (ctx.EdgeAttr[v.edge].edge_type == TDFSContext::EEdgeType::Unknown) {
-                ctx.EdgeAttr[v.edge].edge_type = get_edge_type(current, v.vertex, ctx);
-            }
             if (vattr.Seen == TDFSContext::ECollor::White) {
+                // deffer computing edge state for scheduled vertex
                 stack.push_back(v.vertex);
-                vattr.parent = current;
+                vattr.parent = TGraph::TVertextPath{.vertex = current, .edge = v.edge};
+            } else if (ctx.EdgeAttr[v.edge].edge_type == TDFSContext::EEdgeType::Unknown) {
+                ctx.EdgeAttr[v.edge].edge_type = get_edge_type(current, v.vertex, ctx);
             }
         }
     }
@@ -163,6 +168,13 @@ void DFS(const TGraph& g, TDFSContext& ctx) {
         DFSVisit(g, ctx, v, [](TGraph::TVertextId id, const TGraph::TVertexValue& value, bool begin, std::size_t timestamp){
             return true;
         });
+    }
+    // Color all remain edges
+    for (TGraph::TEdgeId e = 0; e < g.Edges.size(); ++e) {
+        const auto& edge = g.Edges[e];
+        if (ctx.EdgeAttr[e].edge_type == TDFSContext::EEdgeType::Unknown) {
+            ctx.EdgeAttr[e].edge_type = get_edge_type(edge.v1, edge.v2, ctx);
+        }
     }
 }
 
@@ -183,13 +195,13 @@ std::string to_string(TDFSContext::EEdgeType e) {
 int main() {
    TGraph graph;    
     auto s = graph.AddVertex("s");
-    auto z = graph.AddVertex("z");
-    auto y = graph.AddVertex("y");
+    auto t = graph.AddVertex("t");
+    auto u = graph.AddVertex("u");
+    auto v = graph.AddVertex("v");
     auto w = graph.AddVertex("w");
     auto x = graph.AddVertex("x");
-    auto v = graph.AddVertex("v");
-    auto u = graph.AddVertex("u");
-    auto t = graph.AddVertex("t");
+    auto y = graph.AddVertex("y");
+    auto z = graph.AddVertex("z");
 
     graph.AddEdge(s, w);
     graph.AddEdge(s, z);
@@ -199,12 +211,12 @@ int main() {
     graph.AddEdge(y, x);
 
     graph.AddEdge(x, z);
-    graph.AddEdge(t, u);
     graph.AddEdge(t, v);
+    graph.AddEdge(t, u);
 
     graph.AddEdge(u, t);
     graph.AddEdge(u, v);
-    
+
     graph.AddEdge(v, w);
     graph.AddEdge(v, s);
     
@@ -215,7 +227,7 @@ int main() {
     for (std::size_t e = 0; e < graph.Edges.size(); ++e) {
         const auto& edge = graph.Edges[e];
         const auto& eattr = ctx.EdgeAttr[e];
-        std::cout << "Grapt edge: from " << graph.Vertices[edge.v1].Value << " to " << graph.Vertices[edge.v2].Value
+        std::cout << "Edge: from " << graph.Vertices[edge.v1].Value << " to " << graph.Vertices[edge.v2].Value
             << " has type: " <<  to_string(eattr.edge_type)
             << std::endl;
     }
