@@ -6,6 +6,10 @@
 #include <deque>
 #include <map>
 #include <assert.h>
+#include <climits>
+#include <set>
+#include <algorithm>
+#include <sstream>
 
 template<bool Directed>
 struct TGraphGeneric {
@@ -288,54 +292,137 @@ std::vector<TGraph::TEdge> get_bridges(const TGraph& g, const TDFSContext& ctx) 
     }
     return results;
 }
+using namespace std;
 
-
-int main() {
-
-    int n = 4;
-    std::vector<std::vector<int>> connections = {{0,1},{1,2},{2,0}, {0,3}};
-    // int n = 5;
-    // std::vector<std::vector<int>> connections = {{1,0},{2,0},{3,2},{4,2},{4,3},{3,0},{4,0}};
-
-    // int n = 10;
-    // std::vector<std::vector<int>> connections = {{1,0},{2,0},{3,0},{4,1},{5,3},{6,1},{7,2},{8,1},{9,6},{9,3},{3,2},{4,2},{7,4},{6,2},{8,3},{4,0},{8,6},{6,5},{6,3},{7,5},{8,0},{8,5},{5,4},{2,1},{9,5},{9,7},{9,4},{4,3}};
-
-    // int n = 2;
-    // std::vector<std::vector<int>> connections = {{0,1}};
-    
-
-    TGraph graph;    
-    for (int v = 0; v < n; ++v) {
-        graph.AddVertex(std::to_string(v));
-    }
+bool is_conncted(int n, const vector<vector<int>>& connections) {
+    TGraph g;
+    g.Vertices.resize(n);
     for (const auto& e : connections) {
-        graph.AddEdge(e.front(), e.back());
+        g.AddEdge(e.front(), e.back());
     }
-    
-    TDFSContext ctx{graph};
-    DFS(graph, ctx);
-    std::vector<std::vector<int>> results;
-    auto bridges = get_bridges(graph, ctx);
-    for (auto e: bridges) {
-        std::cout << "Bridge from vertex: " << graph.Vertices[e.v1].Value << " to " <<  graph.Vertices[e.v2].Value << std::endl;
-    }   
-    std::cout << std::endl;
-    // auto lows = calc_all_lows(graph, ctx);
-    // for (int v = 0; v < n; ++v) {
-    //     std::cout << "Vertex v:" << v << " low:" << lows[v].low
-    //     << " discovery:" << lows[v].discovery 
-    //     << " finishing time:" << ctx.Attr[v].finish_ts
-    //     << " parent:" << ctx.Attr[v].parent.vertex 
-    //     << std::endl; 
-    // }
-
-    auto articulations = get_articulation_points(graph, ctx);
-    for (auto v: articulations) {
-        std::cout << "Articulation vertex: " << graph.Vertices[v].Value << std::endl;
+    TDFSContext ctx{g};
+    DFS(g, ctx);
+    int parentless_count = 0;
+    for (auto v : ctx.Attr) {
+        if (v.parent.vertex == TGraph::NIL_VERTEX_ID) {
+            ++parentless_count;
+        }
     }
+    return parentless_count == 1;
+}
 
-//     auto bridges = get_bridges(graph, ctx);
+class Solution1 {
+public:
+    vector<vector<int>> criticalConnections(int n, const vector<vector<int>>& connections) {
+        TGraph g;
+        g.Vertices.resize(n);
+        for (const auto& e : connections) {
+            g.AddEdge(e.front(), e.back());
+        }
+        
+        TDFSContext ctx{g};
+        DFS(g, ctx);
+        
+        auto bridges = get_bridges(g, ctx);
+        vector<vector<int>> results;
+        for (auto e : bridges) {
+            results.push_back({int(e.v1), int(e.v2)});
+        }
+        return results;
+    }
+};
 
+
+class Solution2 {
+public:
+    vector<vector<int>>g;
+    vector<vector<int>>res;
+    vector<int>visited, dfn_ancestor, DFN, parent;
+    int dfn = 0;
+    void dfs(int v){
+        visited[v] = true, DFN[v] = dfn++, dfn_ancestor[v] = INT_MAX;
+        for(auto c : g[v]) {
+            if(!visited[c]) {
+                parent[c] = v;
+                dfs(c);
+                dfn_ancestor[v] = min(dfn_ancestor[v], dfn_ancestor[c]);
+                if(dfn_ancestor[c] > DFN[v]) res.push_back({c, v});
+            }
+            else if (parent[v] != c)
+                dfn_ancestor[v] = min(dfn_ancestor[v], DFN[c]);
+        }
+    }
+    vector<vector<int>> criticalConnections(int n, const vector<vector<int>>& connect) {
+        g.resize(n),visited.resize(n), dfn_ancestor.resize(n), parent.resize(n), DFN.resize(n);
+        for(auto e : connect)
+            g[e[0]].push_back(e[1]), g[e[1]].push_back(e[0]);
+        dfs(0);
+        return res;
+    }
+};
+
+
+using connections_t = std::vector<std::vector<int>>;
+std::pair<int, connections_t> generate_random(int max_count) { 
+    int vertex_count = rand() % max_count + 3;
+    int edge_count = rand() % (max_count * max_count) + vertex_count;
+    std::set<std::pair<int, int>> edges;
+    for (int i = 0; i < edge_count; ++i) {
+        int v1 = rand() % vertex_count;
+        int v2 = rand() % vertex_count;
+        if (v1 !=  v2) {
+            edges.insert({
+                std::min(v1, v2),
+                std::max(v1, v2)
+            });
+        }
+    }
+    connections_t connections;
+    for (auto e : edges) {
+        connections.push_back({e.first, e.second});
+    }
+    return {vertex_count, connections};
+}
+
+void canonical(connections_t& input) {
+    for (auto& c : input) {
+        std::sort(c.begin(), c.end());
+    }
+    std::sort(input.begin(), input.end(), [](const auto& l, const auto& r) {
+        return std::tie(l[0], l[1]) < std::tie(r[0], r[1]);
+    });
+}
+
+std::string print(const connections_t& input) {
+    std::ostringstream s;
+    for (const auto& c: input) {
+        s << "{" << c.front() << "," << c.back() << "},";
+    }
+    return s.str();
+} 
+
+
+int main() {    
+
+    for (int i = 0; i < 10000; ++i) {
+        const auto sample = generate_random(3);
+        if (!is_conncted(sample.first, sample.second)) {
+            continue;
+        }
+        auto r1 = Solution1().criticalConnections(sample.first, sample.second);
+        auto r2 = Solution2().criticalConnections(sample.first, sample.second);
+        canonical(r1);
+        canonical(r2);
+        if (r2.empty()) {
+            continue;
+        }
+        if (!std::equal(r1.begin(), r1.end(), r2.begin(), r2.end())) {
+            std::cout << "graph: n=" << sample.first << " edges:" << print(sample.second) << std::endl
+                << "expected: " << print(r2) << std::endl
+                << "got: " << print(r1) << std::endl;
+            std::cout << "----------" << std::endl;
+        }
+    }
     return 0;
 }
 
