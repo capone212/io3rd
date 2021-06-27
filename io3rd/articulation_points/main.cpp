@@ -70,6 +70,14 @@ struct TGraphGeneric {
 using TGraph = TGraphGeneric<false>;
 using TDirectedGraph = TGraphGeneric<true>;
 
+const std::size_t INF_DISTANCE = std::numeric_limits<std::size_t>::max();
+
+struct TLow {
+    std::size_t back = INF_DISTANCE;
+    std::size_t low = INF_DISTANCE;
+    std::size_t discovery = INF_DISTANCE;
+};
+
 struct TDFSContext {
     enum struct ECollor {
         White,
@@ -109,6 +117,7 @@ struct TDFSContext {
     std::vector<TEdgeAttr> EdgeAttr;
     // Predecessor tree
     TDirectedGraph PredTree;
+    std::vector<TLow> Lows;
 };
 
 using TVisitor = std::function<bool(TGraph::TVertextId id, const TGraph::TVertexValue& value, bool begin, std::size_t timestamp)>;
@@ -173,6 +182,8 @@ void DFSVisit(const TGraph& g, TDFSContext& ctx, TGraph::TVertextId startingPoin
     }
 }
 
+std::vector<TLow> calc_all_lows(const TGraph& g, TDFSContext ctx);
+
 void DFS(const TGraph& g, TDFSContext& ctx) {
     for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
         if (ctx.Attr[v].Seen != TDFSContext::ECollor::White) {
@@ -196,6 +207,8 @@ void DFS(const TGraph& g, TDFSContext& ctx) {
             ctx.PredTree.AddEdge(ctx.Attr[v].parent.vertex, v);
         }
     }
+    // Calc lows
+    ctx.Lows = calc_all_lows(g, ctx);
 }
 
 std::string to_string(TDFSContext::EEdgeType e) {
@@ -209,18 +222,6 @@ std::string to_string(TDFSContext::EEdgeType e) {
     };
     return mapping.at(e);
 }
-
-const std::size_t INF_DISTANCE = std::numeric_limits<std::size_t>::max();
-
-struct TLow {
-    std::size_t back = INF_DISTANCE;
-    std::size_t low = INF_DISTANCE;
-    std::size_t discovery = INF_DISTANCE;
-    
-    bool InSync() const {
-        return low == discovery;
-    }
-};
 
 std::size_t calc_low(const TDirectedGraph& p_graph, TGraph::TVertextId v,  std::vector<TLow>& lows) {
     if (lows[v].low != INF_DISTANCE) {
@@ -260,14 +261,23 @@ std::vector<TLow> calc_all_lows(const TGraph& g, TDFSContext ctx) {
 
 using vertex_list_t = std::unordered_set<TGraph::TVertextId>;
 vertex_list_t get_articulation_points(const TGraph& g, const TDFSContext& ctx) {
-    auto lows = calc_all_lows(g, ctx);
     vertex_list_t result;
+    auto has_in_sync_child = [&](TGraph::TVertextId v) {
+        auto parent_discovery = ctx.Lows[v].discovery; 
+        for (auto child : ctx.PredTree.Vertices[v].Adj) {
+            if (ctx.Lows[child.vertex].low >= parent_discovery) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
         if (ctx.Attr[v].parent.vertex == TGraph::NIL_VERTEX_ID) {
             if (ctx.PredTree.Vertices[v].Adj.size() > 1) {
                 result.insert(v);
             }
-        } else if (lows[v].InSync() && !ctx.PredTree.Vertices[v].Adj.empty()) {
+        } else if (has_in_sync_child(v)) {
             result.insert(v);
         }
     }
@@ -276,18 +286,12 @@ vertex_list_t get_articulation_points(const TGraph& g, const TDFSContext& ctx) {
 
 
 std::vector<TGraph::TEdge> get_bridges(const TGraph& g, const TDFSContext& ctx) {
-    // Create predecessor tree
-    auto index = get_articulation_points(g, ctx);
-    auto is_both_articalation = [&](TGraph::TEdge e) {
-        return index.count(e.v1) && index.count(e.v2);
-    };
-    auto has_degree_1 = [&](TGraph::TEdge e) -> bool {
-        return g.Vertices[e.v1].Adj.size() == 1 || g.Vertices[e.v2].Adj.size() == 1;
-    };
     std::vector<TGraph::TEdge> results;
-    for (const auto& e : g.Edges) {
-        if (is_both_articalation(e) || has_degree_1(e)) {
-            results.push_back(e);
+    for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
+        for (const auto& child : ctx.PredTree.Vertices[v].Adj) {
+            if (ctx.Lows[child.vertex].low > ctx.Lows[v].discovery) {
+                results.push_back(TGraph::TEdge{.v1 = v, .v2 = child.vertex});
+            }
         }
     }
     return results;
@@ -404,8 +408,8 @@ std::string print(const connections_t& input) {
 
 int main() {    
 
-    for (int i = 0; i < 10000; ++i) {
-        const auto sample = generate_random(3);
+    for (int i = 0; i < 1000000; ++i) {
+        const auto sample = generate_random(10);
         if (!is_conncted(sample.first, sample.second)) {
             continue;
         }
@@ -426,3 +430,42 @@ int main() {
     return 0;
 }
 
+// int main() {
+
+//     int n = 6;
+//     std::vector<std::vector<int>> connections = {{0,2},{0,3},{1,3},{1,5},{2,3},{3,5},{4,5}};    
+
+//     TGraph graph;    
+//     for (int v = 0; v < n; ++v) {
+//         graph.AddVertex(std::to_string(v));
+//     }
+//     for (const auto& e : connections) {
+//         graph.AddEdge(e.front(), e.back());
+//     }
+    
+//     TDFSContext ctx{graph};
+//     DFS(graph, ctx);
+//     std::vector<std::vector<int>> results;
+//     auto bridges = get_bridges(graph, ctx);
+//     for (auto e: bridges) {
+//         std::cout << "Bridge from vertex: " << graph.Vertices[e.v1].Value << " to " <<  graph.Vertices[e.v2].Value << std::endl;
+//     }   
+//     std::cout << std::endl;
+//     auto lows = calc_all_lows(graph, ctx);
+//     for (int v = 0; v < n; ++v) {
+//         std::cout << "Vertex v:" << v << " low:" << lows[v].low
+//         << " discovery:" << lows[v].discovery 
+//         << " finishing time:" << ctx.Attr[v].finish_ts
+//         << " parent:" << ctx.Attr[v].parent.vertex 
+//         << std::endl; 
+//     }
+
+//     auto articulations = get_articulation_points(graph, ctx);
+//     for (auto v: articulations) {
+//         std::cout << "Articulation vertex: " << graph.Vertices[v].Value << std::endl;
+//     }
+
+// //     auto bridges = get_bridges(graph, ctx);
+
+//     return 0;
+// }
