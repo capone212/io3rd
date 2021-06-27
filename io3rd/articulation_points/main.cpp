@@ -254,8 +254,8 @@ std::vector<TLow> calc_all_lows(const TGraph& g, TDFSContext ctx) {
             continue;
         }
         auto l = std::min(ctx.Attr[edge.v1].discovery_ts, ctx.Attr[edge.v2].discovery_ts);
-        lows[edge.v1].back = l;
-        lows[edge.v2].back = l;
+        lows[edge.v1].back = std::min(l, lows[edge.v1].back);
+        lows[edge.v2].back = std::min(l, lows[edge.v2].back);
     }
     for (TGraph::TVertextId v = 0; v < g.Vertices.size(); ++v) {
         calc_low(ctx.PredTree, v, lows);
@@ -279,17 +279,43 @@ vertex_list_t get_articulation_points(const TGraph& g, const TDFSContext& ctx) {
     return result;
 }
 
-std::vector<TGraph::TEdge> get_bridges(const TGraph& g) {
+// std::vector<TGraph::TEdge> get_bridges(const TGraph& g, const TDFSContext& ctx) {
+//     // Create predecessor tree
+//     auto index = get_articulation_points(g, ctx);
+//     auto is_critical = [&ctx, &index](TGraph::TVertextId v) {
+//         return ctx.Attr[v].IsLeath() || index.count(v); 
+//     };
+//     std::vector<TGraph::TEdge> results;
+//     for (auto e : g.Edges) {
+//         if (is_critical(e.v1) && is_critical(e.v2)) {
+//             results.push_back(e);
+//         }
+//     }
+//     return results;
+// }
+
+// std::vector<TGraph::TEdge> get_bridges(const TGraph& g, const TDFSContext& ctx) {
+//     // Create predecessor tree
+//     auto lows = calc_all_lows(g, ctx);
+//     auto is_critical = [&lows](TGraph::TVertextId v) {
+//         const auto& low = lows[v];
+//         return low.discovery == low.low; 
+//     };
+//     std::vector<TGraph::TEdge> results;
+//     for (auto e : g.Edges) {
+//         if (is_critical(e.v1) && is_critical(e.v2)) {
+//             results.push_back(e);
+//         }
+//     }
+//     return results;
+// }
+
+std::vector<TGraph::TEdge> get_bridges(const TGraph& g, const TDFSContext& ctx) {
     // Create predecessor tree
-    TDFSContext ctx{g};
-    DFS(g, ctx);
-    auto index = get_articulation_points(g, ctx);
-    auto is_critical = [&ctx, &index](TGraph::TVertextId v) {
-        return ctx.Attr[v].IsLeath() || index.count(v); 
-    };
+    auto lows = calc_all_lows(g, ctx);
     std::vector<TGraph::TEdge> results;
     for (auto e : g.Edges) {
-        if (is_critical(e.v1) || is_critical(e.v2)) {
+        if (lows[e.v1].low !=  lows[e.v2].low) {
             results.push_back(e);
         }
     }
@@ -298,32 +324,47 @@ std::vector<TGraph::TEdge> get_bridges(const TGraph& g) {
 
 
 int main() {
-   TGraph graph;    
-    auto s = graph.AddVertex("s");
-    auto t = graph.AddVertex("t");
-    auto u = graph.AddVertex("u");
-    auto v = graph.AddVertex("v");
-    auto w = graph.AddVertex("w");
-    // auto x = graph.AddVertex("x");
-    // auto y = graph.AddVertex("y");
-    // auto z = graph.AddVertex("z");
 
-    graph.AddEdge(s, t);
-    graph.AddEdge(s, u);
-    graph.AddEdge(s, u);
-    // graph.AddEdge(u, v);
-    // graph.AddEdge(v, w);
-    // graph.AddEdge(w, s);
+    // int n = 6;
+    // std::vector<std::vector<int>> connections = {{0,1},{1,2},{2,0},{2,3},{3,4},{4,5},{5,3}};
+    // int n = 5;
+    // std::vector<std::vector<int>> connections = {{1,0},{2,0},{3,2},{4,2},{4,3},{3,0},{4,0}};
 
-    // auto articulations = get_articulation_points(graph);
+    int n = 10;
+    std::vector<std::vector<int>> connections = {{1,0},{2,0},{3,0},{4,1},{5,3},{6,1},{7,2},{8,1},{9,6},{9,3},{3,2},{4,2},{7,4},{6,2},{8,3},{4,0},{8,6},{6,5},{6,3},{7,5},{8,0},{8,5},{5,4},{2,1},{9,5},{9,7},{9,4},{4,3}};
+
+
+    TGraph graph;    
+    for (int v = 0; v < n; ++v) {
+        graph.AddVertex(std::to_string(v));
+    }
+    for (const auto& e : connections) {
+        graph.AddEdge(e.front(), e.back());
+    }
+    
+    TDFSContext ctx{graph};
+    DFS(graph, ctx);
+    std::vector<std::vector<int>> results;
+    auto bridges = get_bridges(graph, ctx);
+    for (auto e: bridges) {
+        std::cout << "Bridge from vertex: " << graph.Vertices[e.v1].Value << " to " <<  graph.Vertices[e.v2].Value << std::endl;
+    }   
+    std::cout << std::endl;
+    auto lows = calc_all_lows(graph, ctx);
+    for (int v = 0; v < n; ++v) {
+        std::cout << "Vertex v:" << v << " low:" << lows[v].low
+        << " discovery:" << lows[v].discovery 
+        << " finishing time:" << ctx.Attr[v].finish_ts
+        << " parent:" << ctx.Attr[v].parent.vertex 
+        << std::endl; 
+    }
+
+    // auto articulations = get_articulation_points(graph, ctx);
     // for (auto v: articulations) {
     //     std::cout << "Articulation vertex: " << graph.Vertices[v].Value << std::endl;
     // }
 
-    auto bridges = get_bridges(graph);
-    for (auto e: bridges) {
-        std::cout << "Bridge from vertex: " << graph.Vertices[e.v1].Value << " to " <<  graph.Vertices[e.v2].Value << std::endl;
-    }
+//     auto bridges = get_bridges(graph, ctx);
 
     return 0;
 }
