@@ -3,21 +3,42 @@
 #include <optional>
 #include <vector>
 #include <thread>
+#include <cassert>
 
-TStack TheStack;
 const std::size_t CYCLES_COUNT = 1'000'000;
+const std::size_t STACK_MAX_SIZE = 64 * 1024; 
 
 // Ready to be template parameter
+// TODO: make cyclick buffer 
 template<typename TNode>
 struct TNodeAllocator {
+    TNodeAllocator() {
+        for (int i = 0; i < STACK_MAX_SIZE; ++i) {
+            CycleBuffer.push_back(std::make_unique<TNode>());
+        }
+    };
+
     TNode* Alloc() {
-        return new TNode{};
+        // Attempt stack full size at max
+        for (int i = 0; i < STACK_MAX_SIZE; ++i) {
+            auto index = Counter++ %  STACK_MAX_SIZE;
+            auto& node = CycleBuffer[index];
+            bool oldValue = false;
+            if (node->Allocated.compare_exchange_strong(oldValue, true, std::memory_order_relaxed) && oldValue == false) {
+                return node.get(); 
+            }
+        }
+        // Can't find free nodes 
+        return nullptr;
     }
 
     void Dealloc(TNode* node) {
-        // delete node;
+        assert(node->Allocated);
+        node->Allocated = false;
     }
-
+    using TNodePtr = std::unique_ptr<TNode>;
+    std::vector<TNodePtr> CycleBuffer;
+    std::atomic_uint32_t Counter = 0;
 };
 
 
@@ -53,15 +74,20 @@ struct TStack {
     }
 
 
-private:
+public:
     struct TNode {
         TValue Value = TValue();
         TNode* Next = nullptr;
+        std::atomic_bool Allocated = false;
     };
 
+private:
     std::atomic<TNode*> Top;
     TNodeAllocator<TNode> Allocator;
 };
+
+
+TStack TheStack;
 
 void DoManyPush() {
     int count = 0;
