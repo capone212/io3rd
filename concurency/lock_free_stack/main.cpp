@@ -1,12 +1,16 @@
 #include <atomic>
-#include <iostream>
 #include <optional>
 #include <vector>
 #include <thread>
 #include <cassert>
+#include <iostream>
+#include <bitset>
+
+#include "tagged_ptr.h"
 
 const std::size_t CYCLES_COUNT = 1'000'000;
-const std::size_t STACK_MAX_SIZE = 64 * 1024; 
+const std::size_t STACK_MAX_SIZE = 64 * 1024;
+
 
 // Ready to be template parameter
 // TODO: make cyclick buffer 
@@ -18,27 +22,34 @@ struct TNodeAllocator {
         }
     };
 
-    TNode* Alloc() {
+    using AtomicTaggedPointer = std::atomic<TaggedPointer<TNode>>;
+    static_assert(AtomicTaggedPointer::is_always_lock_free, "Tagged Ptr is not lock free in this platform!");
+
+    TaggedPointer<TNode> Alloc() {
+        // return new TNode{};
+
         // Attempt stack full size at max
         for (int i = 0; i < STACK_MAX_SIZE; ++i) {
-            auto index = Counter++ %  STACK_MAX_SIZE;
+            auto index = IndexCounter++ %  STACK_MAX_SIZE;
             auto& node = CycleBuffer[index];
             bool oldValue = false;
-            if (node->Allocated.compare_exchange_strong(oldValue, true, std::memory_order_relaxed) && oldValue == false) {
-                return node.get(); 
+            if (node->Allocated.compare_exchange_strong(oldValue, true) && oldValue == false) {
+                return MakeTaggedPointer(node.get(), ++node->Tag); 
             }
         }
         // Can't find free nodes 
-        return nullptr;
+        return {};
     }
 
-    void Dealloc(TNode* node) {
-        assert(node->Allocated);
-        node->Allocated = false;
+    void Dealloc(TaggedPointer<TNode> node) {
+        // return;
+        assert(node.Ptr()->Allocated);
+        node.Ptr()->Allocated = false;
     }
     using TNodePtr = std::unique_ptr<TNode>;
     std::vector<TNodePtr> CycleBuffer;
-    std::atomic_uint32_t Counter = 0;
+    std::atomic_uint32_t IndexCounter = 0;
+    std::atomic_uint16_t AllocCounter = 0;
 };
 
 
@@ -46,29 +57,29 @@ struct TStack {
     using TValue = int;
 
     bool Push(int value) {
-        auto* node = Allocator.Alloc();
-        if (!node) {
+        auto node = Allocator.Alloc();
+        if (node.Ptr() == nullptr) {
             // stack is full
             return false;
         }
-        node->Value = value;
-        node->Next = Top.load(std::memory_order_relaxed);
-        while (!Top.compare_exchange_weak(node->Next, node, std::memory_order_acq_rel, std::memory_order_relaxed)) {
+        node.Ptr()->Value = value;
+        node.Ptr()->Next = Top.load(std::memory_order_relaxed);
+        while (!Top.compare_exchange_weak(node.Ptr()->Next, node, std::memory_order_acquire, std::memory_order_relaxed)) {
         }
         return true;
     }
 
     std::optional<TValue> Pop() {
-        auto* current = Top.load(std::memory_order_relaxed);
-        if (current == nullptr) {
+        auto current = Top.load(std::memory_order_relaxed);
+        if (current.Ptr() == nullptr) {
             return {};
         }
-        while (!Top.compare_exchange_weak(current, current->Next, std::memory_order_acq_rel, std::memory_order_relaxed)) {
-            if (current == nullptr) {
+        while (!Top.compare_exchange_weak(current, current.Ptr()->Next, std::memory_order_acquire, std::memory_order_relaxed)) {
+            if (current.Ptr() == nullptr) {
                 return {};
             } 
         }
-        auto value = current->Value;
+        auto value = current.Ptr()->Value;
         Allocator.Dealloc(current);
         return value;
     }
@@ -77,12 +88,13 @@ struct TStack {
 public:
     struct TNode {
         TValue Value = TValue();
-        TNode* Next = nullptr;
+        TaggedPointer<TNode> Next;
         std::atomic_bool Allocated = false;
+        std::uint16_t Tag = 0;
     };
 
 private:
-    std::atomic<TNode*> Top;
+    std::atomic<TaggedPointer<TNode>> Top;
     TNodeAllocator<TNode> Allocator;
 };
 
