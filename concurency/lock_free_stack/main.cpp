@@ -9,7 +9,7 @@
 #include "tagged_ptr.h"
 
 const std::size_t CYCLES_COUNT = 1'000'000;
-const std::size_t STACK_MAX_SIZE = 64 * 1024;
+const std::size_t STACK_MAX_SIZE = 1 * 1024;
 
 
 // Ready to be template parameter
