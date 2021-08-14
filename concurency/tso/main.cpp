@@ -34,7 +34,7 @@ int main() {
     while (true) {
         a = 0;
         b = 0;
-        __sync_synchronize();
+        std::atomic_thread_fence(std::memory_order_acq_rel);;
         auto f1 = run_task(&handler1);
         auto f2 = run_task(&handler2);
         int lx = f1.get();
