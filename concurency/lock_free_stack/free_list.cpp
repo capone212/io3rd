@@ -11,19 +11,14 @@
 const std::size_t CYCLES_COUNT = 1'000'000;
 const std::size_t STACK_MAX_SIZE = 1 * 1024;
 
-
-// Ready to be template parameter
-// TODO: make cyclick buffer 
-
 template<typename TNode>
 struct TNodeAllocator {
     TNodeAllocator() {
     };
 
-    struct TFreeListNode {
-        std::unique_ptr<TNode> Payload;
-        TaggedPointer<TFreeListNode> Next;
-    };
+    ~TNodeAllocator() {
+        CleanupElements(Top.load(std::memory_order_relaxed));
+    }
 
     using AtomicTaggedPointer = std::atomic<TaggedPointer<TNode>>;
     static_assert(AtomicTaggedPointer::is_always_lock_free, "Tagged Ptr is not lock free in this platform!");
@@ -32,29 +27,7 @@ struct TNodeAllocator {
         return MakeTaggedPointer(new TNode{}, ++AllocCounter); 
     }
 
-    void Dealloc(TaggedPointer<TNode> node) {
-        AddFreeList(node.Ptr());
-    }
-
-    void AddFreeList(TNode* node) {
-        auto nodeToFree = MakeTaggedPointer(new TFreeListNode{}, ++DeallocCounter);
-        nodeToFree.Ptr()->Payload.reset(node);
-        nodeToFree.Ptr()->Next=Top.load();
-        while (!Top.compare_exchange_weak(nodeToFree.Ptr()->Next, nodeToFree, std::memory_order_acquire, std::memory_order_relaxed)) {
-        }
-    }
-
-    void CleanupElements(TaggedPointer<TFreeListNode> nodeToFree) {
-        while (nodeToFree.Ptr) {
-            auto tmp = nodeToFree;
-            nodeToFree = nodeToFree.Ptr()->Next;
-            delete tmp.Ptr(); 
-        }
-    }
-
-    std::atomic_uint16_t AllocCounter = 0;
-    std::atomic_uint16_t DeallocCounter = 0;
-    
+    std::atomic_uint16_t AllocCounter = 0;    
     std::atomic_uint16_t HazardScopes = 0;
 
     struct TScoppedCleanup {
@@ -69,27 +42,61 @@ struct TNodeAllocator {
 
         ~TScoppedCleanup() {
             // Steal elements from free list
-            Stolen = Parent.Top.exchange({});
+            if (Parent.HazardScopes.load() == 1) {
+                Stolen = Parent.Top.exchange({});
+            }
             if (--Parent.HazardScopes == 0) {
-                CleanupElements(Stolen);
+                Parent.CleanupElements(Stolen);
                 return;
             }
             // So we have to add them back
-            while (Stolen.Ptr) {
-                auto tmp = Stolen;
-                Stolen = Stolen.Ptr()->Next;
-                Parent.AddFreeList(tmp.Ptr()->Payload.release());
-                delete tmp.Ptr(); 
-            }
-        } 
+            Parent.RelinkExistingNodes(Stolen);
+        }
 
+        void Dealloc(TaggedPointer<TNode> node) {
+            Parent.AddFreeList(node.Ptr());
+        }
+
+    private:
         TNodeAllocator& Parent;
 
-        TaggedPointer<TFreeListNode> Stolen;
+        TaggedPointer<TNode> Stolen;
     };
 
+private:
+    void AddFreeList(TNode* node) {
+        auto nodeToFree = MakeTaggedPointer(node, ++AllocCounter);
+        nodeToFree.Ptr()->Next = Top.load(std::memory_order_relaxed);
+        while (!Top.compare_exchange_weak(nodeToFree.Ptr()->Next, nodeToFree, std::memory_order_acquire, std::memory_order_relaxed)) {
+        }
+    }
+
+    void CleanupElements(TaggedPointer<TNode> nodeToFree) {
+        while (nodeToFree.Ptr()) {
+            auto tmp = nodeToFree;
+            nodeToFree = nodeToFree.Ptr()->Next;
+            delete tmp.Ptr(); 
+        }
+    }
+
+    void RelinkExistingNodes(TaggedPointer<TNode> head) {
+        if (!head.Ptr()) {
+            return;
+        }
+        // Get last node in the chain
+        auto last = head;
+        while (last.Ptr()->Next.Ptr()) {
+            last = last.Ptr()->Next;
+        }
+        
+        last.Ptr()->Next = Top.load(std::memory_order_relaxed);
+        while (!Top.compare_exchange_weak(last.Ptr()->Next, head, std::memory_order_acq_rel, std::memory_order_relaxed)) {
+        }
+    }
+
+private:
     // Free list
-    std::atomic<TaggedPointer<TFreeListNode>> Top;
+    std::atomic<TaggedPointer<TNode>> Top;
 };
 
 
@@ -110,6 +117,8 @@ struct TStack {
     }
 
     std::optional<TValue> Pop() {
+        TNodeAllocator<TNode>::TScoppedCleanup scopedClean(Allocator);
+
         auto current = Top.load(std::memory_order_relaxed);
         if (current.Ptr() == nullptr) {
             return {};
@@ -120,7 +129,7 @@ struct TStack {
             } 
         }
         auto value = current.Ptr()->Value;
-        Allocator.Dealloc(current);
+        scopedClean.Dealloc(current);
         return value;
     }
 
@@ -173,7 +182,7 @@ int main() {
     }
     // Test multithread
     std::vector<std::thread> threads;
-    for (int i = 0; i < 32; ++i) {
+    for (int i = 0; i < 12; ++i) {
         if (i % 2 == 0) {
             threads.emplace_back(&DoManyPop);
         } else {

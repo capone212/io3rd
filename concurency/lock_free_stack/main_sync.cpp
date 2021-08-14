@@ -111,7 +111,7 @@ int main() {
     }
     // Test multithread
     std::vector<std::thread> threads;
-    for (int i = 0; i < 32; ++i) {
+    for (int i = 0; i < 12; ++i) {
         if (i % 2 == 0) {
             threads.emplace_back(&DoManyPop);
         } else {

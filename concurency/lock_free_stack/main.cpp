@@ -9,7 +9,7 @@
 #include "tagged_ptr.h"
 
 const std::size_t CYCLES_COUNT = 1'000'000;
-const std::size_t STACK_MAX_SIZE = 1 * 1024;
+const std::size_t STACK_MAX_SIZE = 1024;
 
 
 // Ready to be template parameter
@@ -133,7 +133,7 @@ int main() {
     }
     // Test multithread
     std::vector<std::thread> threads;
-    for (int i = 0; i < 32; ++i) {
+    for (int i = 0; i < 12; ++i) {
         if (i % 2 == 0) {
             threads.emplace_back(&DoManyPop);
         } else {
