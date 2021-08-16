@@ -30,37 +30,24 @@ struct TStack {
     using TValue = int;
 
     bool Push(int value) {
-        auto node = Allocator.Alloc();
-        if (node == nullptr) {
-            // stack is full
-            return false;
-        }
-
-        node->Value = value;
-
         {
             std::unique_lock<std::mutex> lock(m_mutex);
-            node->Next = Top;
-            Top = node;
+            Stack.push_back(value);
         }
         return true;
     }
 
     std::optional<TValue> Pop() {
-        TNode* current = nullptr;
-         {
+        TValue val;
+        {
             std::unique_lock<std::mutex> lock(m_mutex);
-            current = Top;
-            if (Top) {
-                Top = Top->Next;
+            if (Stack.empty()) {
+                return {};
             }
+            val = Stack.back();
+            Stack.pop_back();
         }
-        if (!current) {
-            return {};
-        }
-        auto value = current->Value;
-        Allocator.Dealloc(current);
-        return value;
+        return val;
     }
 
 
@@ -71,8 +58,7 @@ public:
     };
 
 private:
-    TNode* Top = nullptr;
-    TNodeAllocator<TNode> Allocator;
+    std::vector<int> Stack;
     std::mutex m_mutex;
 };
 
@@ -111,7 +97,7 @@ int main() {
     }
     // Test multithread
     std::vector<std::thread> threads;
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 6; ++i) {
         if (i % 2 == 0) {
             threads.emplace_back(&DoManyPop);
         } else {
