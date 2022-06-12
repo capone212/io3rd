@@ -67,7 +67,7 @@ struct TTestCase {
     std::vector<int> result;
 };
 
-std::string GetRandomString(const int len, int characters) {
+std::string GetRandomString(int len, int characters) {
     static const char ALPHANUM[] = "abcdefghijklmnopqrstuvwxyz";
     std::string result;
     result.reserve(len);
@@ -76,7 +76,7 @@ std::string GetRandomString(const int len, int characters) {
     characters = std::min<int>(characters, sizeof(ALPHANUM) - 1);
 
     for (int i = 0; i < len; ++i) {
-        result += ALPHANUM[rand() % characters];
+        result.push_back(ALPHANUM[rand() % characters]);
     }
 
     return result;
@@ -123,7 +123,8 @@ int main()
         }
     }
 
-    for (int i = 0; i < 1000000; ++i) {
+    // Stress test
+    for (int i = 0; i < 10000; ++i) {
         TTestCase t;
         t.text = GetRandomString(1000, 10);
         t.result = ZBruteForce(t.text);
@@ -135,6 +136,9 @@ int main()
         }
     }
 
+    // Perf test
+    auto longText = GetRandomString(1'000'000, 1);
+    ZLinear(longText);
 
     std::cout << "OK" << std::endl;
 
