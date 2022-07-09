@@ -192,7 +192,7 @@ std::vector<int> LSmallDashLinear(std::string s) {
     }
     std::vector<int> result(zreverse.size(), 0);
 
-    result[0] = std::ssize(jarray);
+    result[0] = 0;
     for (int i = 1; i < n; ++i) {
         result[i] = jarray[n-i-1];
     }
@@ -257,21 +257,25 @@ int CheckLDash()
 
 int CheckLSmalDash() {
     std::vector<TTestCase> testCases = {
+        // {
+        //     .text = "aa",
+        //     .result = {2, 1},
+        // },
+        // {
+        //     .text = "aaaaaa",
+        //     .result = {6, 5, 4, 3, 2, 1},
+        // },
+        // {
+        //     .text = "zabaab",
+        //     .result = {6, 0, 0, 0, 0, 0},
+        // },
+        // {
+        //     .text = "bbbbcbbb",
+        //     .result = {8, 3, 3, 3, 3, 3, 2, 1},
+        // },
         {
-            .text = "aa",
-            .result = {2, 1},
-        },
-        {
-            .text = "aaaaaa",
-            .result = {6, 5, 4, 3, 2, 1},
-        },
-        {
-            .text = "zabaab",
-            .result = {6, 0, 0, 0, 0, 0},
-        },
-        {
-            .text = "bbbbcbbb",
-            .result = {8, 3, 3, 3, 3, 3, 2, 1},
+            .text = "addb",
+            .result = {0, 0, 0, 0},
         },
     };
 
@@ -286,7 +290,7 @@ int CheckLSmalDash() {
 
 /////////////////////////////////////////////////////////////////////////
 
-std::vector<int> FindAllOccurencesBruteForce(const std::string& text, const std::string& pattern) {
+std::vector<int> FindAllOccurrencesBruteForce(const std::string& text, const std::string& pattern) {
     std::vector<int> positions;
 
     size_t pos = text.find(pattern, 0);
@@ -299,24 +303,48 @@ std::vector<int> FindAllOccurencesBruteForce(const std::string& text, const std:
     return positions;
 }
 
-std::unordered_map<char, std::vector<int>> RightValues(const std::string& text) {
-    std::unordered_map<char, std::vector<int>> result;
+struct TRightValues
+{
+    std::vector<int> Values;
+    int Position = -1;
+
+    void Push(int pos) {
+        Values.push_back(pos);
+        Position = Values.size();
+    }
+
+    int Get(int pos) {
+        while (Position >= 0 && Values[Position] >= pos) {
+            --Position;
+        }
+
+        if (Position >= 0) {
+            return Values[Position];
+        }
+
+        return pos;
+    }
+
+};
+
+std::unordered_map<char, TRightValues> RightValues(const std::string& text) {
+    std::unordered_map<char, TRightValues> result;
 
     for (int i = 0; i < std::ssize(text); ++i) {
-        result[text[i]].push_back(i);
+        result[text[i]].Push(i);
     }
 
     return result;
 }
 
-int BadCharacterPosition(const std::vector<int>& positions, int position) {
-    for (int i = std::ssize(positions) - 1 ; i >= 0; --i) {
-        if (positions[i] < position) {
-            return position - positions[i];
-        }
-    }
-    return position;
-}
+// int BadCharacterPosition(const std::vector<int>& positions, int position) {
+//     for (int i = std::ssize(positions) - 1 ; i >= 0; --i) {
+//         if (positions[i] < position) {
+//             return position - positions[i];
+//         }
+//     }
+//     return position;
+// }
 
 std::vector<int> BoyerMoore(const std::string& text, const std::string& pattern) {
     auto lBigDash = LDashLinear(pattern);
@@ -338,19 +366,19 @@ std::vector<int> BoyerMoore(const std::string& text, const std::string& pattern)
 
         auto oldK = k;
 
-        if (i == 0) {
+        if (i < 0) {
             // we have found a match!
-            positions.push_back(h);
+            positions.push_back(h + 1);
             k += std::ssize(pattern) - lSmallDash[1];
         } else {
-            int badCharacterRuleShift = 0;//BadCharacterPosition(rvalues[pattern[i]], i);
-            int goodSuffixShift = 0;
+            int badCharacterRuleShift = rvalues[text[h]].Get(i);
+            int goodSuffixShift = 1;
             {
                 if (i == std::ssize(pattern) - 1) {
                     goodSuffixShift = 1;
                 }
                 else if (lBigDash[i + 1] > 0) {
-                    goodSuffixShift = std::ssize(pattern) - lBigDash[i + 1];
+                    goodSuffixShift = std::ssize(pattern) - lBigDash[i + 1] - 1;
                 } else {
                     goodSuffixShift = std::ssize(pattern) - lSmallDash[i + 1];
                 }
@@ -388,21 +416,40 @@ bool CheckTest(const TTestPatternCase& t) {
 int main()
 {
     // CheckLSmalDash();
-    // auto testCase = TTestPatternCase {
-    //     .text = GetRandomString(8, 2),
-    //     .pattern = GetRandomString(2, 4),
-    // };
 
-    auto testCase = TTestPatternCase {
-        .text = "babbbbaa",
-        .pattern = "bb",
-    };
+    // for (int i = 0; i < 100000; ++i) {
+    //     auto testCase = TTestPatternCase {
+    //         .text = GetRandomString(100000, 1),
+    //         .pattern = GetRandomString(4, 1),
+    //     };
+    //     testCase.result = FindAllOccurrencesBruteForce(testCase.text, testCase.pattern);
 
-    testCase.result = FindAllOccurencesBruteForce(testCase.text, testCase.pattern);
+    //     if (!CheckTest(testCase)) {
+    //         return 1;
+    //     }
+    // }
 
-    if (!CheckTest(testCase)) {
-        return 1;
+    for (int i = 0; i < 100000; ++i) {
+        auto testCase = TTestPatternCase {
+            .text = GetRandomString(10000, 10),
+            .pattern = GetRandomString(100, 10),
+        };
+        testCase.result = BoyerMoore(testCase.text, testCase.pattern);
+
+        // if (!CheckTest(testCase)) {
+        //     return 1;
+        // }
     }
+
+    // auto testCase = TTestPatternCase {
+    //     .text = "dccbddccac",
+    //     .pattern = "ddcc",
+    // };
+    // testCase.result = FindAllOccurrencesBruteForce(testCase.text, testCase.pattern);
+
+    // if (!CheckTest(testCase)) {
+    //     return 1;
+    // }
 
     std::cout << "OK" << std::endl;
     return 0;
