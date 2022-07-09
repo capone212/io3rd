@@ -67,28 +67,6 @@ std::vector<int> LDashLinear(std::string s) {
     return result;
 }
 
-int FindLMatch(const std::string& s, int startFrom) {
-    const auto pattern = std::string_view(s).substr(startFrom);
-
-    for (int i = std::ssize(s) - 2; i > 0; --i) {
-        auto substring = std::string_view(s).substr(0, i + 1);
-        if (substring.ends_with(pattern)) {
-            return i;
-        }
-    }
-
-    return 0;
-}
-
-std::vector<int> LBruteForce(const std::string& s)
-{
-    std::vector<int> result(s.size(), 0);
-    for (int i = 1; i < s.size(); ++i) {
-        result[i] = FindLMatch(s, i);
-    }
-    return result;
-}
-
 int FindLDashMatch(const std::string& s, int startFrom) {
     const auto pattern = std::string_view(s).substr(startFrom);
     char mismatchChar = s[startFrom - 1];
@@ -168,7 +146,77 @@ std::string GetRandomString(int len, int characters) {
 
 /////////////////////////////////////////////////////////////////////////
 
-int main()
+int FindSuffixThatIsAlsoPrefix(const std::string& s, int position)
+{
+    std::string_view view{s};
+
+    for (int i = position; i < s.size(); ++i) {
+        auto suffix = view.substr(i);
+        if (view.starts_with(suffix)) {
+            return suffix.size();
+        }
+    }
+
+    return 0;
+}
+
+
+// LSmallDash[i] largest suffix of P[i..n] that is also a prefix of P.
+std::vector<int> LSmallDashBruteForce(const std::string& s)
+{
+    std::vector<int> result;
+
+    for (int i = 0; i < std::ssize(s); ++i) {
+        result.push_back(FindSuffixThatIsAlsoPrefix(s, i));
+    }
+
+    return result;
+}
+
+// LSmallDash[i] equals to largest j <= n-i such that, np[j] == j.
+
+std::vector<int> LSmallDashLinear(std::string s) {
+    std::reverse(s.begin(), s.end());
+    auto zreverse = ZLinear(s);
+    std::reverse(zreverse.begin(), zreverse.end());
+
+    int n = std::ssize(s);
+    int lastResult = 0;
+    std::vector<int> jarray(s.size(), 0);
+
+    for (int j = 0; j < s.size(); ++j) {
+        if (zreverse[j] == j + 1) {
+            lastResult = j + 1;
+        }
+        jarray[j] = lastResult;
+    }
+
+
+    std::vector<int> result(zreverse.size(), 0);
+
+    for (int i = 1; i < n-1; ++i) {
+
+        result[i] = jarray[n - i - 1];
+    }
+
+    return result;
+}
+
+bool CheckLSmalTest(const TTestCase& t) {
+    const auto result = LSmallDashLinear(t.text);
+    if (result != t.result) {
+        std::cout << "Test case: " << t.text << " failed!"
+            << " expected: '" << Stringify(t.result)
+            << "' got: '" << Stringify(result) << "'"
+            << std::endl;
+        return false;
+    }
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+int CheckLDash()
 {
     std::vector<TTestCase> testCases = {
         {
@@ -205,6 +253,33 @@ int main()
     // Perf test
     auto longText = GetRandomString(1'000'000, 1);
     LDashLinear(longText);
+
+    return 0;
+}
+
+int main()
+{
+
+    std::vector<TTestCase> testCases = {
+        {
+            .text = "aaaaaa",
+            .result = {0, 5, 4, 3, 2, 0},
+        },
+        {
+            .text = "zabaab",
+            .result = {0, 0, 0, 0, 0, 0},
+        },
+        {
+            .text = "bbbbcbbb",
+            .result = {0, 3, 3, 3, 3, 3, 2, 0},
+        },
+    };
+
+    for (const auto& t : testCases) {
+        if (!CheckLSmalTest(t)) {
+            return 1;
+        }
+    }
 
     std::cout << "OK" << std::endl;
     return 0;
