@@ -190,13 +190,11 @@ std::vector<int> LSmallDashLinear(std::string s) {
         }
         jarray[j] = lastResult;
     }
-
-
     std::vector<int> result(zreverse.size(), 0);
 
-    for (int i = 1; i < n-1; ++i) {
-
-        result[i] = jarray[n - i - 1];
+    result[0] = std::ssize(jarray);
+    for (int i = 1; i < n; ++i) {
+        result[i] = jarray[n-i-1];
     }
 
     return result;
@@ -257,21 +255,23 @@ int CheckLDash()
     return 0;
 }
 
-int main()
-{
-
+int CheckLSmalDash() {
     std::vector<TTestCase> testCases = {
         {
+            .text = "aa",
+            .result = {2, 1},
+        },
+        {
             .text = "aaaaaa",
-            .result = {0, 5, 4, 3, 2, 0},
+            .result = {6, 5, 4, 3, 2, 1},
         },
         {
             .text = "zabaab",
-            .result = {0, 0, 0, 0, 0, 0},
+            .result = {6, 0, 0, 0, 0, 0},
         },
         {
             .text = "bbbbcbbb",
-            .result = {0, 3, 3, 3, 3, 3, 2, 0},
+            .result = {8, 3, 3, 3, 3, 3, 2, 1},
         },
     };
 
@@ -279,6 +279,129 @@ int main()
         if (!CheckLSmalTest(t)) {
             return 1;
         }
+    }
+
+    return 0;
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+std::vector<int> FindAllOccurencesBruteForce(const std::string& text, const std::string& pattern) {
+    std::vector<int> positions;
+
+    size_t pos = text.find(pattern, 0);
+    while(pos != std::string::npos)
+    {
+        positions.push_back(pos);
+        pos = text.find(pattern, pos + 1);
+    }
+
+    return positions;
+}
+
+std::unordered_map<char, std::vector<int>> RightValues(const std::string& text) {
+    std::unordered_map<char, std::vector<int>> result;
+
+    for (int i = 0; i < std::ssize(text); ++i) {
+        result[text[i]].push_back(i);
+    }
+
+    return result;
+}
+
+int BadCharacterPosition(const std::vector<int>& positions, int position) {
+    for (int i = std::ssize(positions) - 1 ; i >= 0; --i) {
+        if (positions[i] < position) {
+            return position - positions[i];
+        }
+    }
+    return position;
+}
+
+std::vector<int> BoyerMoore(const std::string& text, const std::string& pattern) {
+    auto lBigDash = LDashLinear(pattern);
+    auto lSmallDash = LSmallDashLinear(pattern);
+    auto rvalues = RightValues(pattern);
+
+    std::vector<int> positions;
+
+    int k = std::ssize(pattern) - 1;
+
+    while (k < std::ssize(text)) {
+        int i = std::ssize(pattern) - 1;
+        int h = k;
+
+        while (i >= 0 && pattern[i] == text[h]) {
+            --i;
+            --h;
+        }
+
+        auto oldK = k;
+
+        if (i == 0) {
+            // we have found a match!
+            positions.push_back(h);
+            k += std::ssize(pattern) - lSmallDash[1];
+        } else {
+            int badCharacterRuleShift = 0;//BadCharacterPosition(rvalues[pattern[i]], i);
+            int goodSuffixShift = 0;
+            {
+                if (i == std::ssize(pattern) - 1) {
+                    goodSuffixShift = 1;
+                }
+                else if (lBigDash[i + 1] > 0) {
+                    goodSuffixShift = std::ssize(pattern) - lBigDash[i + 1];
+                } else {
+                    goodSuffixShift = std::ssize(pattern) - lSmallDash[i + 1];
+                }
+            }
+
+            k += std::max(badCharacterRuleShift, goodSuffixShift);
+        }
+        assert(k > oldK);
+    }
+
+    return positions;
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+struct TTestPatternCase {
+    std::string text;
+    std::string pattern;
+    std::vector<int> result;
+};
+
+bool CheckTest(const TTestPatternCase& t) {
+    auto result = BoyerMoore(t.text, t.pattern);
+
+    if (result != t.result) {
+        std::cout << "Test case: text:" << t.text << " pattern:" << t.pattern << " failed!"
+            << " expected: '" << Stringify(t.result)
+            << "' got: '" << Stringify(result) << "'"
+            << std::endl;
+        return false;
+    }
+    return true;
+}
+
+int main()
+{
+    // CheckLSmalDash();
+    // auto testCase = TTestPatternCase {
+    //     .text = GetRandomString(8, 2),
+    //     .pattern = GetRandomString(2, 4),
+    // };
+
+    auto testCase = TTestPatternCase {
+        .text = "babbbbaa",
+        .pattern = "bb",
+    };
+
+    testCase.result = FindAllOccurencesBruteForce(testCase.text, testCase.pattern);
+
+    if (!CheckTest(testCase)) {
+        return 1;
     }
 
     std::cout << "OK" << std::endl;
