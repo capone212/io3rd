@@ -129,8 +129,6 @@ int main()
         t.text = GetRandomString(1000, 10);
         t.result = ZBruteForce(t.text);
 
-        const auto result = ZLinear(t.text);
-
         if (!CheckTest(t)) {
             return 1;
         }
