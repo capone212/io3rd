@@ -1,3 +1,4 @@
+#include <iostream>
 #include <string>
 #include <vector>
 #include <memory>
@@ -167,6 +168,13 @@ int main() {
         "bitandem",
     };
 
-    
+    auto text = "bitandemtatem";
+
+    // TODO: algirithm have to find tandem but id does not!
+    auto matches = AhoCorasickSearch(text, keyWords);
+
+    for (const auto& match : matches) {
+        std::cout << "Find match ending at position:" << match.TextPosition << " keyword:" << keyWords[match.KeywordIndex] << std::endl;
+    }
     return 0;
 }
