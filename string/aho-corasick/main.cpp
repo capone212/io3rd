@@ -1,9 +1,12 @@
+#include <algorithm>
 #include <iostream>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <memory>
 #include <assert.h>
 #include <deque>
+#include <unordered_set>
 #include <unordered_map>
 
 struct TNode
@@ -25,6 +28,9 @@ struct TNode
     int Order = 0;
     std::unordered_map<char, TNode*> Child;
     std::optional<int> KeyWordIndex;
+
+    // debug
+    std::string Path;
 };
 
 using PNode = std::unique_ptr<TNode>;
@@ -45,6 +51,7 @@ TKeywordTree MakeKeyWordTree(const std::vector<std::string>& keywords)
             auto& child = current->Child[ch];
             if (!child) {
                 child = new TNode();
+                child->Path = current->Path + ch;
             }
             current = child;
         }
@@ -61,11 +68,16 @@ TNode* FindFailureLink(char nextCharacter, TNode* current, TNode* parent)
     assert(parent->FailureLink);
     auto* node = parent->FailureLink;
 
-    while (node != node->FailureLink) {
+    while (true) {
         auto it = node->Child.find(nextCharacter);
         if (it != node->Child.end()) {
             return it->second;
         }
+
+        if (node == node->FailureLink) {
+            break;
+        }
+
         node = node->FailureLink;
     }
 
@@ -86,8 +98,11 @@ void PopulateFailureLinks(const TKeywordTree& tree)
     // Populate for root and schedule root's direct children
     root->FailureLink = root;
     std::deque<TQueueItem> queue;
-    for (auto& [ch, child] : root->Child) {
-        queue.push_back({ch, child, root});
+    for (const auto [_, child] : root->Child) {
+        child->FailureLink = root;
+        for (const auto [ch, grandChild] : child->Child) {
+            queue.push_back({ch, grandChild, child});
+        }
     }
 
     // Iteratively set failure links for nodes.
@@ -98,6 +113,9 @@ void PopulateFailureLinks(const TKeywordTree& tree)
         auto* current = item.Node;
 
         current->FailureLink = FindFailureLink(item.Char, current, item.Parent);
+
+        // std::cout << "PopulateFailureLinks node: " << current->Path
+        //     << " FailureLink: " << current->FailureLink->Path << std::endl;
 
         for (auto& [ch, child] : current->Child) {
             queue.push_back({ch, child, current});
@@ -111,6 +129,16 @@ struct TMatch
     // (last character index)
     int TextPosition = 0;
     int KeywordIndex = 0;
+
+    bool operator==(const TMatch& other) const
+    {
+        return std::make_tuple(TextPosition, KeywordIndex) == std::make_tuple(other.TextPosition, other.KeywordIndex);
+    }
+
+    bool operator<(const TMatch& other) const
+    {
+        return std::make_tuple(TextPosition, KeywordIndex) < std::make_tuple(other.TextPosition, other.KeywordIndex);
+    }
 };
 
 void ReportMatches(TNode* node, int currentPosition, std::vector<TMatch>& matches)
@@ -158,23 +186,112 @@ std::vector<TMatch> AhoCorasickSearch(const std::string& text, const std::vector
     return matches;
 }
 
-int main() {
-    std::vector<std::string> keyWords = {
-        "tobaco",
-        "tattooo",
-        "tat",
-        "tatem",
-        "tandem",
-        "bitandem",
-    };
+std::vector<TMatch> BruteForceSearch(const std::string& text, const std::vector<std::string>& keywords)
+{
+    std::vector<TMatch> result;
 
-    auto text = "bitandemtatem";
-
-    // TODO: algirithm have to find tandem but id does not!
-    auto matches = AhoCorasickSearch(text, keyWords);
-
-    for (const auto& match : matches) {
-        std::cout << "Find match ending at position:" << match.TextPosition << " keyword:" << keyWords[match.KeywordIndex] << std::endl;
+    for (int keywordIndex = 0; keywordIndex < keywords.size(); ++keywordIndex) {
+        const auto& keyword = keywords[keywordIndex];
+        int index = 0;
+        while ((index = text.find(keyword, index)) != std::string::npos) {
+            result.push_back(TMatch{
+                .TextPosition = static_cast<int>(index + keyword.size()) - 1,
+                .KeywordIndex = keywordIndex,
+            });
+            index += 1;
+        }
     }
+
+    return result;
+}
+
+struct TTestCase
+{
+    std::vector<std::string> Keywords;
+    std::string Text;
+    std::vector<TMatch> Results;
+};
+
+bool CheckTestCase(const TTestCase& testCase)
+{
+    auto expected = BruteForceSearch(testCase.Text, testCase.Keywords);
+    auto actual = testCase.Results;
+
+    std::sort(expected.begin(), expected.end());
+    std::sort(actual.begin(), actual.end());
+
+    if (std::equal(expected.begin(), expected.end(), actual.begin(), actual.end())) {
+        return true;
+    }
+
+    for (const auto& match : expected) {
+        std::cout << "Expected match position:" << match.TextPosition
+            << " keyword:" << testCase.Keywords[match.KeywordIndex] << std::endl;
+    }
+
+    std::cout << std::endl;
+
+    for (const auto& match : actual) {
+        std::cout << "Got match position:" << match.TextPosition
+            << " keyword:" << testCase.Keywords[match.KeywordIndex] << std::endl;
+    }
+
+    return false;
+}
+
+std::string GetRandomString(int len, int characters) {
+    static const char ALPHANUM[] = "abcdefghijklmnopqrstuvwxyz";
+    std::string result;
+    result.reserve(len);
+
+    characters = std::max<int>(characters, 1);
+    characters = std::min<int>(characters, sizeof(ALPHANUM) - 1);
+
+    for (int i = 0; i < len; ++i) {
+        result.push_back(ALPHANUM[rand() % characters]);
+    }
+
+    return result;
+}
+
+std::vector<std::string> GenerateRandomKeywords(int count, int maxSize, int charactersCount)
+{
+    std::unordered_set<std::string> result;
+    result.reserve(count);
+
+    for (int index = 0; index < count; ++index) {
+        int length = (rand() % maxSize) + 1;
+        result.insert(GetRandomString(length, charactersCount));
+    }
+
+    return {result.begin(), result.end()};
+}
+
+int main() {
+    TTestCase test{
+        .Keywords = {
+                "tat",
+                "tatem",
+                "tandem",
+                "bitandem",
+            },
+        .Text = "bitandemtatem",
+    };
+    test.Results = AhoCorasickSearch(test.Text, test.Keywords);
+    CheckTestCase(test);
+
+    for (int i = 0; i < 100000; ++i)
+    {
+        TTestCase test{
+            .Keywords = GenerateRandomKeywords(1000, 10, 20),
+            .Text = GetRandomString(10000, 20),
+        };
+        test.Results = AhoCorasickSearch(test.Text, test.Keywords);
+        if (!CheckTestCase(test)) {
+            std::cout << "text: " << test.Text << std::endl;
+            return 1;
+        }
+    }
+
     return 0;
 }
