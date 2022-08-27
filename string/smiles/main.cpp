@@ -18,8 +18,7 @@ std::string remove_smiles(const std::string& input)
     std::vector<int> positions;
     positions.resize(tokens.size(), 0);
 
-    for (int pos = 0; pos < static_cast<int>(input.size()); ++pos) {
-        result[output] = input[pos];
+    for (auto textChar : input) {
 
         for (int tokenIndex = 0; tokenIndex < static_cast<int>(tokens.size()); ++tokenIndex) {
             const auto& token = tokens[tokenIndex];
@@ -27,21 +26,21 @@ std::string remove_smiles(const std::string& input)
 
             char nextChar = tokenPos >= token.size() ? token.back() : token[tokenPos];
 
-            if (input[pos] == nextChar) {
+            if (textChar == nextChar) {
                 ++tokenPos;
                 continue;
             }
 
             if (tokenPos >= static_cast<int>(token.size())) {
                 output -= tokenPos;
-                result[output] = input[pos];
                 std::fill(positions.begin(), positions.end(), 0);
                 break;
             } else {
                 tokenPos = 0;
             }
         }
-        ++output;
+
+        result[output++] = textChar;
     }
 
     for (int tokenIndex = 0; tokenIndex < static_cast<int>(tokens.size()); ++tokenIndex) {
