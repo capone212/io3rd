@@ -9,9 +9,71 @@ using TTimestamp = std::int64_t;
 using TVersionedValue = std::map<TTimestamp, int>;
 using TKey = int;
 
+// Multiple writer single reader
+// see lock free hash map that should be implemented in dynamic store
+// in dynstore we have revision, to map timestamp to a certain revision
+// revision is monotonic inside tablet, but timestamps are not
+// meaning timestamp2 can be commited, and then timestamp1 can be seen the first time in them tablet
+
+// What if: we created t1 then t2. t2 changed something, then commited.
+// Then we first time read from DS using t1, and we saw changes from t2! wtf?
+// does not it break snapshot isolation?
+
+// Transactions in dynamic store:
+//  == Locks ==
+// We have locks on table rows:
+//  int ReadLockCount;
+//  TTimestamp LastReadLockTimestamp;
+//  TTransaction WriteTransaction
+//  TTimestamp PrepareTimestamp;
+
+// Typical case:
+// Writes are done without timestamp (???)
+
+// Versioned write with ts is used only during replication.
+
+// How we write rows to dynamic store:
+// 0. start transaction with native client
+// 1. make some inserts, make some deletes
+// 2. class TTransaction buffers all the changes before commit
+// 3. user calls commit on transaction
+// 4. transaction sends buffered changes to dynamic store
+// 5. transaction initiates 2 phase commit on 
+
+// 6) Peek random cell as coordinator
+// 7) send to all 2pc prepare
+// 8) commit to all 2pc commit
+
+// Transactions are appearing in DS on demand during write command
+// Dynamic table transactions have leases
+// client has to ping transactions after write and until 2pc commit finishes.
+// TransactionManager on tab node side watches transaction leases and cleans up staled transactions
+// clean up includes releasing all locks.
+
+// During prepare phase transaction become persistent, it is registered in hydra
+// and its lease is not renewed anymore.
+// Coordinator of transaction should either commit transaction or rollback in the end.
+
+// Writer receives conformation of commit after all participants returned ok on prepare,
+// and coordinator successfully commited in the log, that transaction is going to be commited on all participants (no rollback)
+
+// That means, that participants still holds all the locks on rows for transaction,
+// and the same client can receive lock conflicts on successful writes or even stale read.
+// To conquer this, there is a mechanism for blocking reads and writes from DS after rows rites are prepared for commit.
+
+// There is also a weird mechanism of writing rows concurrently with initiating 2pc and checking signatures in tab nodes.
+
+// === How locks work ======
+// raft automata -- persistent stream of deterministic mutations 
+// in reality there are two parts: transient and persistent
+// persistent state is changed inside mutations, deterministic and with no side effects.
+// transient part -- can be read and written outside of mutation.
+// write in persistent state outside mutation is strictly prohibited.
+
+
+
 struct TTransaction {
     TTimestamp StartTimestamp = 0;
-
     std::promise<void> CommitedPromise;
 };
 
