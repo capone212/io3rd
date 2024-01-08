@@ -70,6 +70,26 @@ using TKey = int;
 // transient part -- can be read and written outside of mutation.
 // write in persistent state outside mutation is strictly prohibited.
 
+// There are 3 phase of write
+// pre-lock
+// lock
+// commit
+// Before write we have to transiently lock rows, it happens in prelock phase and only in the leader
+// who is leader here? probably leading peer of tablet cell.
+// If there are no keys yet (they will be created) we create keys, with no values, and lock them.
+
+// We have two maps of transactions: persistent ones and transinient ones
+// Pre-lock is needed, because we do not wait the outcome of the mutation phase,
+// we have to make mutation succeed as long as hydra is working.
+// This is not required, but we can not provide meaningful feedback to the user from mutations.
+
+// Data is published to the dynamic store after commit, before that they are buffered in write log transaction(?)
+// But the needed keys are locked, so nobody can overwrite keys during commit process
+
+// How we guarantee snapshot isolation?
+// How we serve reads for tx2, when transaction holds locks,
+// and we do not know which TS it will have, but it is not commited yet, and tx2 > tx2,
+// lock is essentially prepared timestamp. If somebody is reading with ts less than ts, we should 
 
 
 struct TTransaction {
